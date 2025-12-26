@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
       <PackageReference Include="NSwag.MSBuild" Version="14.6.3">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -14,11 +15,7 @@
     </ItemGroup>
     
     <Target Name="NSwag" AfterTargets="Build" Condition=" '$(Configuration)' == 'Debug' ">
-        <Exec Command="$(NSwagExe_net100) openapi2csclient 
-            /input:openapi.json 
-            /classname:KinopoiskClient 
-            /namespace:Kinopoisk 
-            /output:KinopoiskClient.cs" />
+        <Exec Command="$(NSwagExe_net100) openapi2csclient /generateClientInterfaces:true /input:openapi.json /namespace:Kinopoisk.Gateway /output:ApiClient.cs /operationGenerationMode:MultipleClientsFromFirstTagAndOperationId" />
     </Target>
 
 </Project>
