@@ -9,8 +9,8 @@ namespace DiscordBot;
 public class Program
 {
     private static IServiceProvider _serviceProvider;
-    
-    static async Task Main(string[] args)
+
+    public static async Task Main()
     {
         var collection = new ServiceCollection();
 
@@ -36,9 +36,11 @@ public class Program
 
         _serviceProvider = collection.BuildServiceProvider();
 
-        await RunAsync(args);
+        await RunAsync();
         
-        async Task RunAsync(string[] args)
+        return;
+
+        async Task RunAsync()
         {
             var client = _serviceProvider.GetRequiredService<DiscordSocketClient>();
             var interactionService = _serviceProvider.GetRequiredService<InteractionService>();
@@ -76,5 +78,3 @@ public class Program
         }
     }
 }
-
-
