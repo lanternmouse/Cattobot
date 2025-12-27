@@ -20,10 +20,6 @@ jobs:
   deploy:
     needs: build
     runs-on: self-hosted
-    env:
-      TOKEN: ${{ secrets.TOKEN }}
-      KINOPOISK_TOKEN: ${{ secrets.KINOPOISK_TOKEN }}
-      CONNECTION_STRING: ${{ secrets.CONNECTION_STRING }}
 
     steps:
       - uses: actions/checkout@v4
@@ -32,6 +28,10 @@ jobs:
           docker stop cattobot-container || true
           docker rm cattobot-container || true
       - name: Run new container
+        env:
+          TOKEN: ${{ secrets.TOKEN }}
+          KINOPOISK_TOKEN: ${{ secrets.KINOPOISK_TOKEN }}
+          CONNECTION_STRING: ${{ secrets.CONNECTION_STRING }}
         run: |
           echo "${CONNECTION_STRING}"
           docker run -d \
