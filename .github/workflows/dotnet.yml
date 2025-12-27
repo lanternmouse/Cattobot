@@ -23,6 +23,7 @@ jobs:
     env:
       Cattobot__Token: ${{ secrets.Cattobot__Token }}
       Kinopoisk__Token: ${{ secrets.Kinopoisk__Token }}
+      ConnectionStrings__Default: ${{ secrets.ConnectionStrings__Default }}
 
     steps:
       - uses: actions/checkout@v4
