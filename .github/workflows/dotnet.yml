@@ -40,6 +40,7 @@ jobs:
             -e Cattobot__Token="${TOKEN}" \
             -e Kinopoisk__Token="${KINOPOISK_TOKEN}" \
             -e ConnectionStrings__Default="${CONNECTION_STRING}" \
+            --add-host=host.docker.internal:host-gateway \
             lanternmouse/cattobot:latest
       - name: Cleanup
         run: docker image prune -f
