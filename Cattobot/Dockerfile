@@ -5,12 +5,9 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["Cattobot/Cattobot.csproj", "Cattobot/"]
-COPY ["Kinopoisk.Gateway/Kinopoisk.Gateway.csproj", "Kinopoisk.Gateway/"]
-COPY ["Cattobot.Db/Cattobot.Db.csproj", "Cattobot.Db/"]
-RUN dotnet restore "Cattobot/Cattobot.csproj"
-COPY . .
+COPY . /src
 WORKDIR "/src/Cattobot"
+RUN dotnet restore "./Cattobot.csproj"
 RUN dotnet build "./Cattobot.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 FROM build AS publish
