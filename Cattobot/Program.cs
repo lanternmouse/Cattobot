@@ -39,6 +39,12 @@ public class Program
             o.UseNpgsql(configuration.GetConnectionString("Default"));
         });
         builder.Services.AddScoped<CattobotDbContext>();
+
+        await using (var serviceProvider = builder.Services.BuildServiceProvider())
+        {
+            var db = serviceProvider.GetRequiredService<CattobotDbContext>();
+            await db.Database.MigrateAsync();
+        }
         
         # endregion
         
