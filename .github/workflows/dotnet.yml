@@ -21,9 +21,9 @@ jobs:
     needs: build
     runs-on: self-hosted
     env:
-      Cattobot__Token: ${{ secrets.CATTOBOT__TOKEN }}
-      Kinopoisk__Token: ${{ secrets.KINOPOISK__TOKEN }}
-      ConnectionStrings__Default: ${{ secrets.CONNECTIONSTRINGS__DEFAULT }}
+      TOKEN: ${{ secrets.TOKEN }}
+      KINOPOISK_TOKEN: ${{ secrets.KINOPOISK_TOKEN }}
+      CONNECTION_STRING: ${{ secrets.CONNECTION_STRING }}
 
     steps:
       - uses: actions/checkout@v4
@@ -33,13 +33,13 @@ jobs:
           docker rm cattobot-container || true
       - name: Run new container
         run: |
-          echo "$ConnectionStrings__Default"
+          echo "${CONNECTION_STRING}"
           docker run -d \
             --name cattobot-container \
             --restart unless-stopped \
-            -e Cattobot__Token="$Cattobot__Token" \
-            -e Kinopoisk__Token="$Kinopoisk__Token" \
-            -e ConnectionStrings__Default="$ConnectionStrings__Default" \
+            -e Cattobot__Token="${TOKEN}" \
+            -e Kinopoisk__Token="${KINOPOISK_TOKEN}" \
+            -e ConnectionStrings__Default="${CONNECTION_STRING}" \
             lanternmouse/cattobot:latest
       - name: Cleanup
         run: docker image prune -f
