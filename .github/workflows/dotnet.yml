@@ -33,6 +33,7 @@ jobs:
           docker rm cattobot-container || true
       - name: Run new container
         run: |
+          echo "$ConnectionStrings__Default"
           docker run -d \
             --name cattobot-container \
             --restart unless-stopped \
