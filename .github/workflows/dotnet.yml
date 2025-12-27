@@ -32,9 +32,9 @@ jobs:
           docker rm cattobot-container || true
       - name: Run new container
         run: |
-          docker run -d 
-            --name cattobot-container 
-            --restart unless-stopped 
+          docker run -d \
+            --name cattobot-container \
+            --restart unless-stopped \
             lanternmouse/cattobot:latest
       - name: Cleanup
         run: docker image prune -f
