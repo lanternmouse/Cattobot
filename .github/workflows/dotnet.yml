@@ -21,9 +21,9 @@ jobs:
     needs: build
     runs-on: self-hosted
     env:
-      Cattobot__Token: ${{ secrets.Cattobot__Token }}
-      Kinopoisk__Token: ${{ secrets.Kinopoisk__Token }}
-      ConnectionStrings__Default: ${{ secrets.ConnectionStrings__Default }}
+      Cattobot__Token: ${{ secrets.CATTOBOT__TOKEN }}
+      Kinopoisk__Token: ${{ secrets.KINOPOISK__TOKEN }}
+      ConnectionStrings__Default: ${{ secrets.CONNECTIONSTRINGS__DEFAULT }}
 
     steps:
       - uses: actions/checkout@v4
