@@ -5,20 +5,44 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <RootNamespace>DiscordBot</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
+        <None Update="appsettings.json">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+        <None Update="appsettings.*.json">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="appsettings.Prod.json">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+    
+    <ItemGroup>
       <PackageReference Include="Discord.Net" Version="3.18.0" />
       <PackageReference Include="Discord.Net.Interactions" Version="3.18.0" />
+      <PackageReference Include="Mapster" Version="9.0.0-pre01" />
+      <PackageReference Include="Mapster.Async" Version="9.0.0-pre01" />
+      <PackageReference Include="Mapster.Core" Version="9.0.0-pre01" />
+      <PackageReference Include="Mapster.DependencyInjection" Version="9.0.0-pre01" />
       <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.1" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.1" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     </ItemGroup>
 
     <ItemGroup>
       <Folder Include="Services\" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Cattobot.Db\Cattobot.Db.csproj" />
+      <ProjectReference Include="..\Kinopoisk.Gateway\Kinopoisk.Gateway.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,40 +1,70 @@
 ﻿using System.Reflection;
+using Cattobot.Automapper;
+using Cattobot.Configuration;
+using Cattobot.Db;
+using Cattobot.Services;
+using Cattobot.Services.Abstractions;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Kinopoisk.Gateway;
+using Mapster;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-namespace DiscordBot;
+namespace Cattobot;
 
 public class Program
 {
-    private static IServiceProvider _serviceProvider;
-
     public static async Task Main()
     {
-        var collection = new ServiceCollection();
+        var builder = Host.CreateApplicationBuilder();
+        
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .AddEnvironmentVariables()
+            .Build();
 
-        var config = new DiscordSocketConfig()
+        builder.Services.Configure<CattobotOptions>(configuration.GetSection("Cattobot"));
+
+        # region Entity Framework
+        
+        builder.Services.AddPooledDbContextFactory<CattobotDbContext>(o =>
+        {
+            o.UseNpgsql(configuration.GetConnectionString("Default"));
+        });
+        builder.Services.AddScoped<CattobotDbContext>();
+        
+        # endregion
+        
+        # region Discord
+            
+        builder.Services.AddSingleton(new DiscordSocketConfig()
         {
             GatewayIntents = GatewayIntents.All,
             LogLevel = LogSeverity.Verbose
-        };
-
-        var interactionConfig = new InteractionServiceConfig
+        });
+        builder.Services.AddSingleton<DiscordSocketClient>();
+        builder.Services.AddSingleton(new InteractionServiceConfig
         {
             AutoServiceScopes = true
-        };
-        
-        collection.AddSingleton(config);
-        collection.AddSingleton<DiscordSocketClient>();
-        collection.AddSingleton(interactionConfig);
-        collection.AddSingleton<InteractionService>(sp =>
+        });
+        builder.Services.AddSingleton<InteractionService>(sp =>
             new InteractionService(
                 sp.GetRequiredService<DiscordSocketClient>(),
                 sp.GetRequiredService<InteractionServiceConfig>()
-                ));
+            ));
+        
+        # endregion
 
-        _serviceProvider = collection.BuildServiceProvider();
+        builder.Services.AddMapster();
+        builder.Services.AddKinopoiskIntegration(configuration);
+        builder.Services.AddScoped<IFilmRepository, DbFilmRepository>();
 
         await RunAsync();
         
@@ -42,10 +72,11 @@ public class Program
 
         async Task RunAsync()
         {
-            var client = _serviceProvider.GetRequiredService<DiscordSocketClient>();
-            var interactionService = _serviceProvider.GetRequiredService<InteractionService>();
-
-            var token = "";
+            var serviceProvider = builder.Services.BuildServiceProvider();
+            var client = serviceProvider.GetRequiredService<DiscordSocketClient>();
+            var interactionService = serviceProvider.GetRequiredService<InteractionService>();
+            var config = serviceProvider.GetRequiredService<IOptions<CattobotOptions>>();
+            var logger = serviceProvider.GetRequiredService<ILogger<DiscordSocketClient>>();
             
             client.Log += async (msg) =>
             {
@@ -55,9 +86,9 @@ public class Program
             
             client.Ready += async () =>
             {
-                await interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
+                await interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), serviceProvider);
 
-#if Debug
+#if DEBUG
                 await interactionService.RegisterCommandsToGuildAsync(983041476315459615, true);
                 await interactionService.RegisterCommandsToGuildAsync(381045322044145679, true);
 #else
@@ -68,10 +99,10 @@ public class Program
             client.InteractionCreated += async (x) =>
             {
                 var ctx = new SocketInteractionContext(client, x);
-                await interactionService.ExecuteCommandAsync(ctx, _serviceProvider);
+                await interactionService.ExecuteCommandAsync(ctx, serviceProvider);
             };
 
-            await client.LoginAsync(TokenType.Bot, token);
+            await client.LoginAsync(TokenType.Bot, config.Value.Token);
             await client.StartAsync();
             
             await Task.Delay(Timeout.Infinite);

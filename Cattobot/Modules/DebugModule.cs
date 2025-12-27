@@ -1,6 +1,6 @@
 using Discord.Interactions;
 
-namespace DiscordBot.Modules;
+namespace Cattobot.Modules;
 
 public class DebugModule : InteractionModuleBase
 {
