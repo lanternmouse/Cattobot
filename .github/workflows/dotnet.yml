@@ -15,7 +15,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Build docker image
-      run: docker build -t lanternmouse/cattobot:latest ./Cattobot
+      run: docker build -f Cattobot/Dockerfile -t lanternmouse/cattobot:latest .
       
   deploy:
     needs: build
