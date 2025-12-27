@@ -10,7 +10,7 @@ on:
 jobs:
   build:
 
-    runs-on: 66518c1d1b9942818ebba354
+    runs-on: self-hosted
 
     steps:
     - uses: actions/checkout@v4
