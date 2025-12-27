@@ -33,18 +33,11 @@ public class Program
         builder.Services.Configure<CattobotOptions>(configuration.GetSection("Cattobot"));
 
         # region Entity Framework
-        
-        builder.Services.AddPooledDbContextFactory<CattobotDbContext>(o =>
-        {
-            o.UseNpgsql(configuration.GetConnectionString("Default"));
-        });
-        builder.Services.AddScoped<CattobotDbContext>();
 
-        await using (var serviceProvider = builder.Services.BuildServiceProvider())
-        {
-            var db = serviceProvider.GetRequiredService<CattobotDbContext>();
-            await db.Database.MigrateAsync();
-        }
+        builder.Services.AddPooledDbContextFactory<CattobotDbContext>(o =>
+            o.UseNpgsql(configuration.GetConnectionString("Default")));
+        builder.Services.AddDbContext<CattobotDbContext>(o =>
+            o.UseNpgsql(configuration.GetConnectionString("Default")));
         
         # endregion
         
@@ -71,6 +64,14 @@ public class Program
         builder.Services.AddMapster();
         builder.Services.AddKinopoiskIntegration(configuration);
         builder.Services.AddScoped<IFilmRepository, DbFilmRepository>();
+        
+        builder.Build();
+        
+        await using (var serviceProvider = builder.Services.BuildServiceProvider())
+        {
+            var db = serviceProvider.GetRequiredService<CattobotDbContext>();
+            await db.Database.MigrateAsync();
+        }
 
         await RunAsync();
         

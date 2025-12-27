@@ -1,5 +1,6 @@
 ﻿using Cattobot.Db.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Cattobot.Db;
 
@@ -14,10 +15,5 @@ public class CattobotDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
-    }
-
-    protected override void OnConfiguring(DbContextOptionsBuilder builder)
-    {
-        builder.UseNpgsql("Host=localhost;Database=cattobot;Username=postgres;Password=A1qwert");
     }
 }
