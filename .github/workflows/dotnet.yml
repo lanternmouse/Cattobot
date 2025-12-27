@@ -36,6 +36,9 @@ jobs:
           docker run -d \
             --name cattobot-container \
             --restart unless-stopped \
+            -e Cattobot__Token \
+            -e Kinopoisk__Token \
+            -e ConnectionStrings__Default \
             lanternmouse/cattobot:latest
       - name: Cleanup
         run: docker image prune -f
