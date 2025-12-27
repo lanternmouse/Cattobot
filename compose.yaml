@@ -1,0 +1,7 @@
+﻿services:
+  cattobot:
+    image: cattobot
+    build:
+      context: .
+      dockerfile: Cattobot/Dockerfile
+
