@@ -34,6 +34,8 @@ public class Program
 
         # region Entity Framework
 
+        builder.Services.AddSingleton<DbContextOptions<CattobotDbContext>>(sp =>
+            new DbContextOptions<CattobotDbContext>());
         builder.Services.AddPooledDbContextFactory<CattobotDbContext>(o =>
             o.UseNpgsql(configuration.GetConnectionString("Default")));
         builder.Services.AddDbContext<CattobotDbContext>(o =>
@@ -61,10 +63,14 @@ public class Program
         
         # endregion
 
+        # region Mapster
+        
         var config = new TypeAdapterConfig();
         config.Scan(Assembly.GetExecutingAssembly());
         builder.Services.AddSingleton(config);
         builder.Services.AddMapster();
+        
+        # endregion
         
         builder.Services.AddKinopoiskIntegration(configuration);
         builder.Services.AddScoped<IFilmRepository, DbFilmRepository>();
@@ -74,7 +80,7 @@ public class Program
         await using (var serviceProvider = builder.Services.BuildServiceProvider())
         {
             var db = serviceProvider.GetRequiredService<CattobotDbContext>();
-            await db.Database.MigrateAsync();
+            // await db.Database.MigrateAsync();
         }
 
         await RunAsync();

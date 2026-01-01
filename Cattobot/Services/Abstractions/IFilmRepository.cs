@@ -11,4 +11,6 @@ public interface IFilmRepository
     Task<FilmDb> Get(Guid id, CancellationToken ct = default);
     
     Task Remove(Guid id, CancellationToken ct = default);
+
+    Task MarkWatched(Guid id, CancellationToken ct = default);
 }

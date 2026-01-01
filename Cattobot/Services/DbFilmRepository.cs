@@ -38,11 +38,13 @@ public class DbFilmRepository(
 
     public IQueryable<FilmDb> GetListQuery(ulong guildId, ulong? userId)
     {
-        var films = dbContext.Films
+        var filmsQuery = dbContext.Films
             .Where(x => x.GuildId == guildId)
-            .Where(x => !userId.HasValue || x.AddedBy == userId.Value);
+            .Where(x => !userId.HasValue || x.AddedBy == userId.Value)
+            .GroupBy(x => x.KinopoiskId)
+            .Select(x => x.First());
 
-        return films;
+        return filmsQuery;
     }
 
     public async Task<FilmDb> Get(Guid id, CancellationToken ct = default)
@@ -54,8 +56,12 @@ public class DbFilmRepository(
 
     public async Task Remove(Guid id, CancellationToken ct = default)
     {
-        await dbContext.Films
-            .Where(x => x.Id == id)
-            .ExecuteDeleteAsync(ct);
+        await dbContext.Films.Where(x => x.Id == id).ExecuteDeleteAsync(ct);
+    }
+    
+    public async Task MarkWatched(Guid id, CancellationToken ct = default)
+    {
+        await dbContext.Films.Where(x => x.Id == id)
+            .ExecuteUpdateAsync(x => x.SetProperty(p => p.IsWatched, true), ct);
     }
 }

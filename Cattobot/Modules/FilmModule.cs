@@ -1,7 +1,9 @@
 using System.Text;
+using Cattobot.Db;
 using Cattobot.Db.Models;
 using Cattobot.Services.Abstractions;
 using Discord;
+using Discord.Commands;
 using Discord.Interactions;
 using Kinopoisk.Gateway;
 using MapsterMapper;
@@ -9,16 +11,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cattobot.Modules;
 
-[Group("film", "Film Commands")]
+[Discord.Interactions.Group("film", "Film Commands")]
 public class FilmModule(
     IFilmsClient kinopoiskFilmsClient,
     IFilmRepository filmRepo,
+    CattobotDbContext dbContext,
     IMapper mapper
     ) : InteractionModuleBase
 {
-    [SlashCommand("add", "Add a new film")]
-    public async Task Add(
-        [Autocomplete(typeof(AddFilmAutocompleteHandler))] int query)
+    [SlashCommand("add", "Add a new film from Kinopoisk")]
+    public async Task AddKinopoisk(
+        [Autocomplete(typeof(KinopoiskAutocompleteHandler))] int query)
     {
         var addedBy = Context.User.Id;
         var guild = Context.Guild.Id;
@@ -69,10 +72,14 @@ public class FilmModule(
     }
 
     [SlashCommand("list", "Get list of films")]
-    public async Task List(IUser? user)
+    public async Task List(IUser? user = null)
     {
         var guildId = Context.Guild.Id;
-        var films = await filmRepo.GetListQuery(guildId, user?.Id)
+
+        var filmsQuery = filmRepo.GetListQuery(guildId, user?.Id);
+
+        var films = await dbContext.Films
+            .Where(x => filmsQuery.Contains(x))
             .OrderBy(x => x.AddedOn)
             .ToListAsync();
 
@@ -89,9 +96,7 @@ public class FilmModule(
     }
     
     [SlashCommand("roll", "Get random film from list")]
-    public async Task Roll(
-        [Autocomplete(typeof(FilmsAutocompleteHandler))] Guid query
-        )
+    public async Task Roll()
     {
         var random = new Random(DateTime.UtcNow.Millisecond);
         
@@ -150,17 +155,31 @@ public class FilmModule(
     
     [SlashCommand("remove", "Remove film from list")]
     public async Task Remove(
-        [Autocomplete(typeof(FilmsAutocompleteHandler))] Guid query
+        [Autocomplete(typeof(FilmsAutocompleteHandler))] string query
     )
     {
-        var film = await filmRepo.Get(query);
-        await filmRepo.Remove(query);
+        var id = Guid.Parse(query);
+        
+        var film = await filmRepo.Get(id);
+        await filmRepo.Remove(id);
 
-        await FollowupAsync($"Фильм {film.LocalizedTitle} удалён из вашего списка");
+        await RespondAsync($"Фильм **[{film.LocalizedTitle}]** удалён из вашего списка");
+    }
+    
+    [SlashCommand("mark-as-watched", "Marks film as watched")]
+    public async Task MarkAsWatched(
+        [Autocomplete(typeof(FilmsAutocompleteHandler))] string query)
+    {
+        var id = Guid.Parse(query);
+        
+        var film = await filmRepo.Get(id);
+        await filmRepo.MarkWatched(id);
+
+        await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как просмотренный");
     }
 }
 
-public class AddFilmAutocompleteHandler(
+public class KinopoiskAutocompleteHandler(
     IFilmsClient kinopoiskFilmsClient
 ) : AutocompleteHandler
 {
@@ -175,7 +194,7 @@ public class AddFilmAutocompleteHandler(
 
         var results = filmSuggestions.Films.Select(s => new AutocompleteResult(
             $"{s.NameRu} ({s.Year}), {s.NameEn}",
-            s.FilmId
+            s.FilmId.ToString()
         ));
 
         return AutocompletionResult.FromSuccess(results.Take(25));
@@ -198,8 +217,8 @@ public class FilmsAutocompleteHandler(
             .ToListAsync();
 
         var results = filmSuggestions.Select(s => new AutocompleteResult(
-            $"{s.LocalizedTitle} ({s.Year}), {s.Title}",
-            s.Id
+            $"{s.LocalizedTitle} ({s.Year})",
+            s.Id.ToString()
         ));
 
         return AutocompletionResult.FromSuccess(results.Take(25));
