@@ -61,7 +61,11 @@ public class Program
         
         # endregion
 
+        var config = new TypeAdapterConfig();
+        config.Scan(Assembly.GetExecutingAssembly());
+        builder.Services.AddSingleton(config);
         builder.Services.AddMapster();
+        
         builder.Services.AddKinopoiskIntegration(configuration);
         builder.Services.AddScoped<IFilmRepository, DbFilmRepository>();
         

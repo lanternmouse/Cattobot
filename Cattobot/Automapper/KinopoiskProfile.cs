@@ -10,7 +10,7 @@ public class KinopoiskProfile : IRegister
     {
         config.NewConfig<Film, FilmDb>()
             .Map(d => d.KinopoiskId, s => s.KinopoiskId)
-            .Map(d => d.Title, s => s.NameEn)
+            .Map(d => d.Title, s => s.NameEn ?? "")
             .Map(d => d.LocalizedTitle, s => s.NameRu)
             .Map(d => d.Description, s => s.Description)
             .Map(d => d.Duration, s => s.FilmLength ?? 0)
