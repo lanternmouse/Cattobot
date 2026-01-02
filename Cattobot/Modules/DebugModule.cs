@@ -12,4 +12,11 @@ public class DebugModule(
     {
         await RespondAsync($"Pong! Latency is {client.Latency} ms");
     }
+    
+    [SlashCommand("unload-slash", "Unload guild's slash commands")]
+    public async Task UnloadSlash()
+    {
+        await Context.Guild.BulkOverwriteApplicationCommandsAsync([]);
+        await RespondAsync("Done!");
+    }
 }

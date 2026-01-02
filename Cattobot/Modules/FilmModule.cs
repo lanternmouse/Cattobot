@@ -1,9 +1,9 @@
 using System.Text;
+using Cattobot.AutocompleteHandlers;
 using Cattobot.Db;
 using Cattobot.Db.Models;
 using Cattobot.Services.Abstractions;
 using Discord;
-using Discord.Commands;
 using Discord.Interactions;
 using Kinopoisk.Gateway;
 using MapsterMapper;
@@ -176,51 +176,5 @@ public class FilmModule(
         await filmRepo.MarkWatched(id);
 
         await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как просмотренный");
-    }
-}
-
-public class KinopoiskAutocompleteHandler(
-    IFilmsClient kinopoiskFilmsClient
-) : AutocompleteHandler
-{
-    public override async Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context,
-        IAutocompleteInteraction autocompleteInteraction, IParameterInfo parameter, IServiceProvider services)
-    {
-        var value = autocompleteInteraction.Data.Current.Value.ToString();
-        if (value == null || value.Length < 3)
-            return AutocompletionResult.FromSuccess([]);
-        
-        var filmSuggestions = await kinopoiskFilmsClient.SearchByKeywordAsync(value, 1);
-
-        var results = filmSuggestions.Films.Select(s => new AutocompleteResult(
-            $"{s.NameRu} ({s.Year}), {s.NameEn}",
-            s.FilmId.ToString()
-        ));
-
-        return AutocompletionResult.FromSuccess(results.Take(25));
-    }
-}
-
-public class FilmsAutocompleteHandler(
-    IFilmRepository filmRepo
-) : AutocompleteHandler
-{
-    public override async Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context,
-        IAutocompleteInteraction autocompleteInteraction, IParameterInfo parameter, IServiceProvider services)
-    {
-        var value = autocompleteInteraction.Data.Current.Value.ToString();
-
-        var filmSuggestions = await filmRepo.GetListQuery(context.Guild.Id, context.User.Id)
-            .Where(x => EF.Functions.ILike(x.LocalizedTitle, $"%{value}%"))
-            .OrderByDescending(x => x.AddedOn)
-            .Take(25)
-            .ToListAsync();
-
-        var results = filmSuggestions.Select(s => new AutocompleteResult(
-            $"{s.LocalizedTitle} ({s.Year})",
-            s.Id.ToString()
-        ));
-
-        return AutocompletionResult.FromSuccess(results.Take(25));
     }
 }
