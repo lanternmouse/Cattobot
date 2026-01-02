@@ -58,6 +58,7 @@ jobs:
           echo "${CONNECTION_STRING}"
           docker run -d \
             --name cattobot-container \
+            --network mynet \
             --restart unless-stopped \
             -e Cattobot__Token="${TOKEN}" \
             -e Kinopoisk__Token="${KINOPOISK_TOKEN}" \
