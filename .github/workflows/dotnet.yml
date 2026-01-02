@@ -23,7 +23,7 @@ jobs:
         
     - name: Build and push Docker image
       run: |
-        docker build -f Cattobot/Dockerfile -t lanternmouse/cattobot:${{ github.sha }} .
+        docker build -f Cattobot/Dockerfile -t lanternmouse/cattobot:latest -t lanternmouse/cattobot:${{ github.sha }} .
         docker push lanternmouse/cattobot:latest
         docker push lanternmouse/cattobot:${{ github.sha }}
       
