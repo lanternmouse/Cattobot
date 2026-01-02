@@ -10,23 +10,45 @@ on:
 jobs:
   build:
 
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: Build docker image
-      run: docker build -f Cattobot/Dockerfile -t lanternmouse/cattobot:latest .
+      
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+        
+    - name: Build and push Docker image
+      run: |
+        docker build -f Cattobot/Dockerfile -t lanternmouse/cattobot:latest:${{ github.sha }} .
+        docker push lanternmouse/cattobot:latest
+        docker push lanternmouse/cattobot:${{ github.sha }}
       
   deploy:
+    
     needs: build
     runs-on: self-hosted
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Pull latest image
+        run: docker pull lanternmouse/cattobot:latest
+        
       - name: Remove old container
         run: |
           docker stop cattobot-container || true
           docker rm cattobot-container || true
+          
       - name: Run new container
         env:
           TOKEN: ${{ secrets.TOKEN }}
@@ -42,5 +64,6 @@ jobs:
             -e ConnectionStrings__Default="${CONNECTION_STRING}" \
             --add-host=host.docker.internal:host-gateway \
             lanternmouse/cattobot:latest
+          
       - name: Cleanup
         run: docker image prune -f
