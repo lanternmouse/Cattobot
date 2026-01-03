@@ -1,3 +1,4 @@
+using Cattobot.Db.Models.Enums;
 using Cattobot.Services.Abstractions;
 using Discord;
 using Discord.Interactions;
@@ -5,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cattobot.AutocompleteHandlers;
 
-public class FilmsAutocompleteHandler(
+public class PlannedFilmsAutocompleteHandler(
     IFilmRepository filmRepo
 ) : AutocompleteHandler
 {
@@ -14,14 +15,14 @@ public class FilmsAutocompleteHandler(
     {
         var value = autocompleteInteraction.Data.Current.Value.ToString();
 
-        var filmSuggestions = await filmRepo.GetListQuery(context.Guild.Id, context.User.Id)
-            .Where(x => EF.Functions.ILike(x.LocalizedTitle, $"%{value}%"))
-            .OrderByDescending(x => x.AddedOn)
+        var filmSuggestions = await filmRepo.GetGuildListQuery(context.Guild.Id, context.User.Id, [FilmStatus.Planned])
+            .Where(x => EF.Functions.ILike(x.Film.LocalizedTitle, $"%{value}%"))
+            .OrderByDescending(x => x.StatusOn)
             .Take(25)
             .ToListAsync();
 
         var results = filmSuggestions.Select(s => new AutocompleteResult(
-            $"{s.LocalizedTitle} ({s.Year})",
+            $"{s.Film.LocalizedTitle} ({s.Film.Year})",
             s.Id.ToString()
         ));
 

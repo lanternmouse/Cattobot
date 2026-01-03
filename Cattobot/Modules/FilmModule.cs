@@ -1,7 +1,7 @@
 using System.Text;
 using Cattobot.AutocompleteHandlers;
-using Cattobot.Db;
 using Cattobot.Db.Models;
+using Cattobot.Db.Models.Enums;
 using Cattobot.Services.Abstractions;
 using Discord;
 using Discord.Interactions;
@@ -11,11 +11,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cattobot.Modules;
 
-[Discord.Interactions.Group("film", "Film Commands")]
+[Group("film", "Film Commands")]
 public class FilmModule(
     IFilmsClient kinopoiskFilmsClient,
     IFilmRepository filmRepo,
-    CattobotDbContext dbContext,
     IMapper mapper
     ) : InteractionModuleBase
 {
@@ -76,17 +75,28 @@ public class FilmModule(
     {
         var guildId = Context.Guild.Id;
 
-        var filmsQuery = filmRepo.GetListQuery(guildId, user?.Id);
-
-        var films = await dbContext.Films
-            .Where(x => filmsQuery.Contains(x))
-            .OrderBy(x => x.AddedOn)
+        var films = await filmRepo.GetGuildListQuery(guildId, user?.Id, [])
             .ToListAsync();
 
         var text = new StringBuilder();
+        
         var index = 1;
-        foreach (var film in films)
-            text.AppendLine($"{index++}. {film.LocalizedTitle} ({film.Year})");
+        text.AppendLine("Запланировано:");
+        foreach (var film in films.Where(x => x.FilmStatus == FilmStatus.Planned))
+            text.AppendLine($"{index++}. {film.Film.LocalizedTitle} ({film.Film.Year})");
+        text.AppendLine();
+
+        index = 1;
+        text.AppendLine("Просмотрено:");
+        foreach (var film in films.Where(x => x.FilmStatus == FilmStatus.Completed))
+            text.AppendLine($"{index++}. {film.Film.LocalizedTitle} ({film.Film.Year})");
+        text.AppendLine();
+        
+        index = 1;
+        text.AppendLine("Брошено:");
+        foreach (var film in films.Where(x => x.FilmStatus == FilmStatus.Abandoned))
+            text.AppendLine($"{index++}. {film.Film.LocalizedTitle} ({film.Film.Year})");
+        text.AppendLine();
 
         var stream = new MemoryStream(Encoding.UTF8.GetBytes(text.ToString()));
 
@@ -102,7 +112,7 @@ public class FilmModule(
         
         var guildId = Context.Guild.Id;
 
-        var filmsQuery = filmRepo.GetListQuery(guildId, null);
+        var filmsQuery = filmRepo.GetGuildListQuery(guildId, null, []);
 
         var filmCount = await filmsQuery.CountAsync();
 
@@ -113,7 +123,7 @@ public class FilmModule(
 
         await DeferAsync();
 
-        var film = await kinopoiskFilmsClient.FilmsAsync(pickedFilm.KinopoiskId!.Value);
+        var film = await kinopoiskFilmsClient.FilmsAsync(pickedFilm.Film.KinopoiskId!.Value);
 
         await FollowupAsync($"Случайным образом выбран фильм **[{film.NameRu} ({film.Year})]({film.WebUrl})**", [
             new EmbedBuilder
@@ -155,25 +165,25 @@ public class FilmModule(
     
     [SlashCommand("remove", "Remove film from list")]
     public async Task Remove(
-        [Autocomplete(typeof(FilmsAutocompleteHandler))] string query
+        [Autocomplete(typeof(PlannedFilmsAutocompleteHandler))] string query
     )
     {
         var id = Guid.Parse(query);
         
         var film = await filmRepo.Get(id);
-        await filmRepo.Remove(id);
+        await filmRepo.RemoveGuildMember(id, Context.User.Id, Context.Guild.Id);
 
         await RespondAsync($"Фильм **[{film.LocalizedTitle}]** удалён из вашего списка");
     }
     
     [SlashCommand("mark-as-watched", "Marks film as watched")]
     public async Task MarkAsWatched(
-        [Autocomplete(typeof(FilmsAutocompleteHandler))] string query)
+        [Autocomplete(typeof(PlannedFilmsAutocompleteHandler))] string query)
     {
         var id = Guid.Parse(query);
         
         var film = await filmRepo.Get(id);
-        await filmRepo.MarkWatched(id);
+        await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Completed);
 
         await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как просмотренный");
     }

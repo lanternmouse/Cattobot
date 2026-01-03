@@ -1,5 +1,6 @@
 using Cattobot.Db;
 using Cattobot.Db.Models;
+using Cattobot.Db.Models.Enums;
 using Cattobot.Services.Abstractions;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,40 +10,57 @@ public class DbFilmRepository(
     CattobotDbContext dbContext
     ) : IFilmRepository
 {
-    public async Task<Guid> Add(FilmDb film, ulong addedBy, ulong guildId, CancellationToken ct = default)
+    public async Task<Guid> Add(FilmDb film, ulong userId, ulong guildId, 
+        CancellationToken ct = default)
     {
         var filmDb = await dbContext.Films
-            .FirstOrDefaultAsync(x => x.KinopoiskId == film.KinopoiskId && x.GuildId == guildId && x.AddedBy == addedBy,
-                ct);
-
+            .Include(x => x.Guilds.Where(s => s.GuildId == guildId))
+            .ThenInclude(x => x.Members)
+            .FirstOrDefaultAsync(x => x.KinopoiskId == film.KinopoiskId, ct);
+        
         if (filmDb == null)
         {
-            film.AddedOn = DateTime.UtcNow;
-            await dbContext.Films.AddAsync(film, ct);
+            filmDb = film;
+            await dbContext.Films.AddAsync(filmDb, ct);
         }
-        else
+
+        var guildState = filmDb.Guilds.FirstOrDefault(x => x.GuildId == guildId);
+        if (guildState == null)
         {
-            filmDb = film with
+            guildState = new FilmGuildDb
             {
-                AddedOn = filmDb.AddedOn,
+                GuildId = guildId,
+                FilmStatus = FilmStatus.Planned
             };
+            filmDb.Guilds.Add(guildState);
         }
-        
-        film.AddedBy = addedBy;
-        film.GuildId = guildId;
+
+        var guildMember = guildState.Members.FirstOrDefault(x => x.UserId == userId);
+        if (guildMember == null)
+        {
+            guildMember = new FilmGuildMemberDb
+            {
+                UserId = userId
+            };
+            guildState.Members.Add(guildMember);
+        }
         
         await dbContext.SaveChangesAsync(ct);
         
-        return film.Id;
+        return filmDb.Id;
     }
 
-    public IQueryable<FilmDb> GetListQuery(ulong guildId, ulong? userId)
+    public IQueryable<FilmGuildDb> GetGuildListQuery(ulong guildId, ulong? userId, FilmStatus[] statuses)
     {
-        var filmsQuery = dbContext.Films
+        var filmsQuery = dbContext.FilmGuilds
+            .Include(x => x.Members)
             .Where(x => x.GuildId == guildId)
-            .Where(x => !userId.HasValue || x.AddedBy == userId.Value)
-            .GroupBy(x => x.KinopoiskId)
-            .Select(x => x.First());
+            .Where(g => !userId.HasValue || g.Members.Any(m => m.UserId == userId))
+            .OrderByDescending(x => x.StatusOn)
+            .AsQueryable();
+
+        if (statuses.Length != 0)
+            filmsQuery = filmsQuery.Where(x => statuses.Contains(x.FilmStatus));
 
         return filmsQuery;
     }
@@ -54,14 +72,26 @@ public class DbFilmRepository(
         return film;
     }
 
-    public async Task Remove(Guid id, CancellationToken ct = default)
+    public async Task RemoveGuildMember(Guid id, ulong userId, ulong guildId, CancellationToken ct = default)
     {
-        await dbContext.Films.Where(x => x.Id == id).ExecuteDeleteAsync(ct);
+        var guild = await dbContext.FilmGuilds
+            .Where(x => x.FilmId == id && x.GuildId == guildId)
+            .FirstAsync(ct);
+        
+        guild.Members.RemoveAll(x => x.UserId == userId);
+        
+        if (guild.Members.Count == 0)
+            dbContext.Remove(guild);
+
+        await dbContext.SaveChangesAsync(ct);
     }
     
-    public async Task MarkWatched(Guid id, CancellationToken ct = default)
+    public async Task SetGuildStatus(Guid id, ulong guildId, FilmStatus status, CancellationToken ct = default)
     {
-        await dbContext.Films.Where(x => x.Id == id)
-            .ExecuteUpdateAsync(x => x.SetProperty(p => p.IsWatched, true), ct);
+        await dbContext.FilmGuilds.Where(x => x.FilmId == id && x.GuildId == guildId)
+            .ExecuteUpdateAsync(x => x
+                    .SetProperty(p => p.FilmStatus, status)
+                    .SetProperty(p => p.StatusOn, DateTime.UtcNow),
+                ct);
     }
 }
