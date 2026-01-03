@@ -124,7 +124,7 @@ public class FilmModule(
 
         await DeferAsync();
 
-        await FollowupAsync($"Случайным образом выбран фильм **[{pickedFilm.Film.LocalizedTitle} ({pickedFilm.Film.Year})](www.kinopoisk.ru/film/{pickedFilm.Film.KinopoiskId})**", [
+        await FollowupAsync($"Случайным образом выбран фильм **[{pickedFilm.Film.LocalizedTitle} ({pickedFilm.Film.Year})](https://www.kinopoisk.ru/film/{pickedFilm.Film.KinopoiskId})**", [
             new EmbedBuilder
             {
                 ImageUrl = pickedFilm.Film.ImageUrl,
