@@ -48,7 +48,7 @@ public class Program
         # region Logging
 
         Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Verbose()
+            .MinimumLevel.Information()
             .Enrich.FromLogContext()
             .WriteTo.Console()
             .CreateLogger();

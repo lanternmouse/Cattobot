@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using Cattobot.AutocompleteHandlers;
 using Cattobot.Db.Models;
@@ -123,40 +124,38 @@ public class FilmModule(
 
         await DeferAsync();
 
-        var film = await kinopoiskFilmsClient.FilmsAsync(pickedFilm.Film.KinopoiskId!.Value);
-
-        await FollowupAsync($"Случайным образом выбран фильм **[{film.NameRu} ({film.Year})]({film.WebUrl})**", [
+        await FollowupAsync($"Случайным образом выбран фильм **[{pickedFilm.Film.LocalizedTitle} ({pickedFilm.Film.Year})](www.kinopoisk.ru/film/{pickedFilm.Film.KinopoiskId})**", [
             new EmbedBuilder
             {
-                ImageUrl = film.CoverUrl,
-                Description = film.Description,
+                ImageUrl = pickedFilm.Film.ImageUrl,
+                Description = pickedFilm.Film.Description,
                 Fields =
                 [
                     new EmbedFieldBuilder()
                     {
                         Name = "Страна",
                         IsInline = true,
-                        Value = string.Join(", ", film.Countries.Select(c => c.Country1))
+                        Value = string.Join(", ", pickedFilm.Film.Countries)
                     },
                     new EmbedFieldBuilder()
                     {
                         Name = "Жанр",
                         IsInline = true,
-                        Value = string.Join(", ", film.Genres.Select(g => g.Genre1))
+                        Value = string.Join(", ", pickedFilm.Film.Genres)
                     },
                     new EmbedFieldBuilder
                     {
                         Name = "Длительность",
                         IsInline = true,
-                        Value = film.FilmLength.HasValue
-                            ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(film.FilmLength.Value)).ToString("HH:mm")
+                        Value = pickedFilm.Film.Duration != null
+                            ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(pickedFilm.Film.Duration)).ToString("HH:mm")
                             : "Неизвестно"
                     },
                     new EmbedFieldBuilder()
                     {
                         Name = "Рейтинг IMDB",
                         IsInline = true,
-                        Value = film.RatingImdb.ToString() ?? "-"
+                        Value = pickedFilm.Film.RatingImdb.ToString(new CultureInfo("ru-RU")) ?? "-"
                     }
                 ]
             }.Build()
