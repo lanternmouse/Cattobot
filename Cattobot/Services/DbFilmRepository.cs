@@ -53,6 +53,7 @@ public class DbFilmRepository(
     public IQueryable<FilmGuildDb> GetGuildListQuery(ulong guildId, ulong? userId, FilmStatus[] statuses, string? search)
     {
         var filmsQuery = dbContext.FilmGuilds
+            .Include(x => x.Film)
             .Include(x => x.Members)
             .Where(x => x.GuildId == guildId)
             .Where(g => !userId.HasValue || g.Members.Any(m => m.UserId == userId))
