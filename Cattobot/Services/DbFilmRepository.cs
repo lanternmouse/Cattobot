@@ -50,7 +50,7 @@ public class DbFilmRepository(
         return filmDb.Id;
     }
 
-    public IQueryable<FilmGuildDb> GetGuildListQuery(ulong guildId, ulong? userId, FilmStatus[] statuses)
+    public IQueryable<FilmGuildDb> GetGuildListQuery(ulong guildId, ulong? userId, FilmStatus[] statuses, string? search)
     {
         var filmsQuery = dbContext.FilmGuilds
             .Include(x => x.Members)
@@ -61,6 +61,9 @@ public class DbFilmRepository(
 
         if (statuses.Length != 0)
             filmsQuery = filmsQuery.Where(x => statuses.Contains(x.FilmStatus));
+        
+        if(!string.IsNullOrEmpty(search))
+            filmsQuery = filmsQuery.Where(x => EF.Functions.ILike(x.Film.LocalizedTitle, $"%{search}%"));
 
         return filmsQuery;
     }
@@ -79,9 +82,6 @@ public class DbFilmRepository(
             .FirstAsync(ct);
         
         guild.Members.RemoveAll(x => x.UserId == userId);
-        
-        if (guild.Members.Count == 0)
-            dbContext.Remove(guild);
 
         await dbContext.SaveChangesAsync(ct);
     }

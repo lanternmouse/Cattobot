@@ -7,7 +7,8 @@ public interface IFilmRepository
 {
     Task<Guid> Add(FilmDb film, ulong userId, ulong guildId, CancellationToken ct = default);
 
-    IQueryable<FilmGuildDb> GetGuildListQuery(ulong guildId, ulong? userId, FilmStatus[] statuses);
+    IQueryable<FilmGuildDb> GetGuildListQuery(ulong guildId, ulong? userId, FilmStatus[] statuses,
+        string? search = null);
 
     Task<FilmDb> Get(Guid id, CancellationToken ct = default);
     

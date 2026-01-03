@@ -112,7 +112,7 @@ public class FilmModule(
         
         var guildId = Context.Guild.Id;
 
-        var filmsQuery = filmRepo.GetGuildListQuery(guildId, null, []);
+        var filmsQuery = filmRepo.GetGuildListQuery(guildId, null, [FilmStatus.Planned]);
 
         var filmCount = await filmsQuery.CountAsync();
 
@@ -165,7 +165,7 @@ public class FilmModule(
     
     [SlashCommand("remove", "Remove film from list")]
     public async Task Remove(
-        [Autocomplete(typeof(PlannedFilmsAutocompleteHandler))] string query
+        [Autocomplete(typeof(GuildMemberFilmsAutocompleteHandler))] string query
     )
     {
         var id = Guid.Parse(query);
@@ -178,7 +178,7 @@ public class FilmModule(
     
     [SlashCommand("mark-as-watched", "Marks film as watched")]
     public async Task MarkAsWatched(
-        [Autocomplete(typeof(PlannedFilmsAutocompleteHandler))] string query)
+        [Autocomplete(typeof(NonWatchedFilmsAutocompleteHandler))] string query)
     {
         var id = Guid.Parse(query);
         
@@ -186,5 +186,29 @@ public class FilmModule(
         await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Completed);
 
         await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как просмотренный");
+    }
+    
+    [SlashCommand("mark-as-planned", "Marks film as planned")]
+    public async Task MarkAsPlanned(
+        [Autocomplete(typeof(NonPlannedFilmsAutocompleteHandler))] string query)
+    {
+        var id = Guid.Parse(query);
+        
+        var film = await filmRepo.Get(id);
+        await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Planned);
+
+        await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как запланированный");
+    }
+    
+    [SlashCommand("mark-as-abandoned", "Marks film as abandoned")]
+    public async Task MarkAsAbandoned(
+        [Autocomplete(typeof(NonAbandonedFilmsAutocompleteHandler))] string query)
+    {
+        var id = Guid.Parse(query);
+        
+        var film = await filmRepo.Get(id);
+        await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Abandoned);
+
+        await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как брошенный");
     }
 }

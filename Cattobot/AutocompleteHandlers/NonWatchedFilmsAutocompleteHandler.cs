@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Cattobot.AutocompleteHandlers;
 
-public class PlannedFilmsAutocompleteHandler(
+public class NonWatchedFilmsAutocompleteHandler(
     IFilmRepository filmRepo
 ) : AutocompleteHandler
 {
@@ -15,9 +15,8 @@ public class PlannedFilmsAutocompleteHandler(
     {
         var value = autocompleteInteraction.Data.Current.Value.ToString();
 
-        var filmSuggestions = await filmRepo.GetGuildListQuery(context.Guild.Id, context.User.Id, [FilmStatus.Planned])
-            .Where(x => EF.Functions.ILike(x.Film.LocalizedTitle, $"%{value}%"))
-            .OrderByDescending(x => x.StatusOn)
+        var filmSuggestions = await filmRepo
+            .GetGuildListQuery(context.Guild.Id, null, [FilmStatus.Planned, FilmStatus.Abandoned], value)
             .Take(25)
             .ToListAsync();
 
