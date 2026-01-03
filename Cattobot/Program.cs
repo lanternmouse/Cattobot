@@ -14,6 +14,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Serilog;
+using Serilog.Events;
 
 namespace Cattobot;
 
@@ -42,6 +44,17 @@ public class Program
             .AddJsonFile("appsettings.json")
             .AddEnvironmentVariables()
             .Build();
+        
+        # region Logging
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Verbose()
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+            .CreateLogger();
+        builder.UseSerilog();
+        
+        # endregion
 
         builder.ConfigureServices(services =>
         {
@@ -60,7 +73,7 @@ public class Program
             services.AddSingleton(new DiscordSocketConfig()
             {
                 GatewayIntents = GatewayIntents.All,
-                LogLevel = LogSeverity.Verbose
+                LogLevel = LogSeverity.Verbose,
             });
             services.AddSingleton<DiscordSocketClient>();
             services.AddSingleton(new InteractionServiceConfig
@@ -98,11 +111,7 @@ public class Program
         var config = _serviceProvider.GetRequiredService<IOptions<CattobotOptions>>();
         var logger = _serviceProvider.GetRequiredService<ILogger<DiscordSocketClient>>();
 
-        client.Log += async (msg) =>
-        {
-            await Task.CompletedTask;
-            Console.WriteLine(msg);
-        };
+        client.Log += LogAsync;
 
         client.Ready += async () =>
         {
@@ -125,5 +134,21 @@ public class Program
         await client.StartAsync();
 
         await Task.Delay(Timeout.Infinite);
+    }
+    
+    private static async Task LogAsync(LogMessage message)
+    {
+        var severity = message.Severity switch
+        {
+            LogSeverity.Critical => LogEventLevel.Fatal,
+            LogSeverity.Error => LogEventLevel.Error,
+            LogSeverity.Warning => LogEventLevel.Warning,
+            LogSeverity.Info => LogEventLevel.Information,
+            LogSeverity.Verbose => LogEventLevel.Verbose,
+            LogSeverity.Debug => LogEventLevel.Debug,
+            _ => LogEventLevel.Information
+        };
+        Log.Write(severity, message.Exception, "[{Source}] {Message}", message.Source, message.Message);
+        await Task.CompletedTask;
     }
 }
