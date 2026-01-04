@@ -9,6 +9,7 @@ using Discord.Interactions;
 using Kinopoisk.Gateway;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Cattobot.Modules;
 
@@ -16,7 +17,8 @@ namespace Cattobot.Modules;
 public class FilmModule(
     IFilmsClient kinopoiskFilmsClient,
     IFilmRepository filmRepo,
-    IMapper mapper
+    IMapper mapper,
+    IMemoryCache cache
     ) : InteractionModuleBase
 {
     [SlashCommand("add", "Add a new film from Kinopoisk")]
@@ -29,42 +31,52 @@ public class FilmModule(
         await DeferAsync();
         
         // autocomplete return only kinopoisk ids for now
-        var film = await kinopoiskFilmsClient.FilmsAsync(query);
-        var filmDb = mapper.Map<FilmDb>(film!);
-        await filmRepo.Add(filmDb, addedBy, guild);
+        var cacheKey = $"kinopoisk-{query}";
+        FilmDb filmDb;
+        if (cache.TryGetValue(cacheKey, out FilmSearchResponse_films? cachedFilm) && cachedFilm != null)
+        {
+            filmDb = mapper.Map<FilmDb>(cachedFilm);
+        }
+        else
+        {
+            var film = await kinopoiskFilmsClient.FilmsAsync(query);
+            filmDb = mapper.Map<FilmDb>(film!);
+        }
         
-        await FollowupAsync($"Добавлен фильм **[{film.NameRu} ({film.Year})]({film.WebUrl})**", [
+        await filmRepo.Add(filmDb, addedBy, guild);
+
+        await FollowupAsync($" Добавлен фильм **[{filmDb.LocalizedTitle} ({filmDb.Year})](https://www.kinopoisk.ru/film/{filmDb.KinopoiskId})** в список запланированных", [
             new EmbedBuilder
             {
-                ThumbnailUrl = film.PosterUrlPreview,
-                Description = film.ShortDescription,
+                ThumbnailUrl = filmDb.PreviewImageUrl,
+                Description = filmDb.Description,
                 Fields =
                 [
                     new EmbedFieldBuilder()
                     {
                         Name = "Страна",
                         IsInline = true,
-                        Value = string.Join(", ", film.Countries.Select(c => c.Country1))
+                        Value = string.Join(", ", filmDb.Countries)
                     },
                     new EmbedFieldBuilder()
                     {
                         Name = "Жанр",
                         IsInline = true,
-                        Value = string.Join(", ", film.Genres.Select(g => g.Genre1))
+                        Value = string.Join(", ", filmDb.Genres)
                     },
                     new EmbedFieldBuilder
                     {
                         Name = "Длительность",
                         IsInline = true,
-                        Value = film.FilmLength.HasValue
-                            ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(film.FilmLength.Value)).ToString("HH:mm")
+                        Value = filmDb.Duration != null
+                            ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(filmDb.Duration)).ToString("HH:mm")
                             : "Неизвестно"
                     },
                     new EmbedFieldBuilder()
                     {
                         Name = "Рейтинг IMDB",
                         IsInline = true,
-                        Value = film.RatingImdb.ToString() ?? "-"
+                        Value = filmDb.Rating.ToString(CultureInfo.InvariantCulture) ?? "-"
                     }
                 ]
             }.Build()
@@ -124,7 +136,7 @@ public class FilmModule(
 
         await DeferAsync();
 
-        await FollowupAsync($"Случайным образом выбран фильм **[{pickedFilm.Film.LocalizedTitle} ({pickedFilm.Film.Year})](https://www.kinopoisk.ru/film/{pickedFilm.Film.KinopoiskId})**", [
+        await FollowupAsync($"🎲 Случайным образом выбран фильм **[{pickedFilm.Film.LocalizedTitle} ({pickedFilm.Film.Year})](https://www.kinopoisk.ru/film/{pickedFilm.Film.KinopoiskId})**", [
             new EmbedBuilder
             {
                 ImageUrl = pickedFilm.Film.ImageUrl,
@@ -155,7 +167,7 @@ public class FilmModule(
                     {
                         Name = "Рейтинг IMDB",
                         IsInline = true,
-                        Value = pickedFilm.Film.RatingImdb.ToString(new CultureInfo("ru-RU")) ?? "-"
+                        Value = pickedFilm.Film.Rating.ToString(new CultureInfo("ru-RU")) ?? "-"
                     }
                 ]
             }.Build()

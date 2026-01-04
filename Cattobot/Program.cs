@@ -58,6 +58,8 @@ public class Program
 
         builder.ConfigureServices(services =>
         {
+            services.AddMemoryCache();
+            
             services.Configure<CattobotOptions>(configuration.GetSection("Cattobot"));
 
             # region Entity Framework
@@ -73,12 +75,14 @@ public class Program
             services.AddSingleton(new DiscordSocketConfig()
             {
                 GatewayIntents = GatewayIntents.All,
-                LogLevel = LogSeverity.Verbose,
+                LogLevel = LogSeverity.Verbose
             });
             services.AddSingleton<DiscordSocketClient>();
             services.AddSingleton(new InteractionServiceConfig
             {
-                AutoServiceScopes = true
+                AutoServiceScopes = true,
+                ThrowOnError = true,
+                DefaultRunMode = RunMode.Async
             });
             services.AddSingleton<InteractionService>(sp =>
                 new InteractionService(
