@@ -54,12 +54,6 @@ public class FilmModule(
                 [
                     new EmbedFieldBuilder()
                     {
-                        Name = "Страна",
-                        IsInline = true,
-                        Value = string.Join(", ", filmDb.Countries)
-                    },
-                    new EmbedFieldBuilder()
-                    {
                         Name = "Жанр",
                         IsInline = true,
                         Value = string.Join(", ", filmDb.Genres)
@@ -74,7 +68,7 @@ public class FilmModule(
                     },
                     new EmbedFieldBuilder()
                     {
-                        Name = "Рейтинг IMDB",
+                        Name = "Рейтинг",
                         IsInline = true,
                         Value = filmDb.Rating.ToString(CultureInfo.InvariantCulture) ?? "-"
                     }
