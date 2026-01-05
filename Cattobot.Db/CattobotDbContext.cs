@@ -13,10 +13,16 @@ public class CattobotDbContext(DbContextOptions<CattobotDbContext> options) : Db
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        builder.HasPostgresExtension("pg_trgm");
+        
         builder.Entity<FilmDb>(b =>
         {
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedOnAdd();
+
+            b.HasIndex(x => x.LocalizedTitle)
+                .HasMethod("gin")
+                .HasOperators("gin_trgm_ops");
 
             b.HasIndex(x => x.KinopoiskId)
                 .HasFilter($"\"{nameof(FilmDb.KinopoiskId)}\" IS NOT NULL")

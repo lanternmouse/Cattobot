@@ -18,11 +18,12 @@ public class NonWatchedFilmsAutocompleteHandler(
         var filmSuggestions = await filmRepo
             .GetGuildListQuery(context.Guild.Id, null, [FilmStatus.Planned, FilmStatus.Abandoned], value)
             .Take(25)
+            .Select(x => new {x.Film.LocalizedTitle, x.Film.Year, x.Film.Id})
             .ToListAsync();
 
         var results = filmSuggestions.Select(s => new AutocompleteResult(
-            $"{s.Film.LocalizedTitle} ({s.Film.Year})",
-            s.Film.Id.ToString()
+            $"{s.LocalizedTitle} ({s.Year})",
+            s.Id.ToString()
         ));
 
         return AutocompletionResult.FromSuccess(results.Take(25));

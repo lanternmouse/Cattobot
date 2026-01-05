@@ -3,6 +3,7 @@ using System;
 using Cattobot.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cattobot.Db.Migrations
 {
     [DbContext(typeof(CattobotDbContext))]
-    partial class CattobotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260105145454_AddTrigramTitleIndex")]
+    partial class AddTrigramTitleIndex
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

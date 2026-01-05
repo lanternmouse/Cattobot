@@ -117,7 +117,6 @@ public class Program
         var interactionService = _serviceProvider.GetRequiredService<InteractionService>();
         var config = _serviceProvider.GetRequiredService<IOptions<CattobotOptions>>();
         var buttonHandler = _serviceProvider.GetRequiredService<IButtonHandler>();
-        var logger = _serviceProvider.GetRequiredService<ILogger<DiscordSocketClient>>();
 
         client.Log += LogAsync;
 
