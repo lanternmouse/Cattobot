@@ -15,9 +15,6 @@
         <None Update="appsettings.*.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="appsettings.Prod.json">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </None>
     </ItemGroup>
     
     <ItemGroup>
@@ -44,10 +41,6 @@
       <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
       <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Services\" />
     </ItemGroup>
 
     <ItemGroup>

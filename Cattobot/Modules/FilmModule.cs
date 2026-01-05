@@ -1,8 +1,9 @@
-using System.Globalization;
 using System.Text;
 using Cattobot.AutocompleteHandlers;
 using Cattobot.Db.Models;
 using Cattobot.Db.Models.Enums;
+using Cattobot.Helpers;
+using Cattobot.Services;
 using Cattobot.Services.Abstractions;
 using Discord;
 using Discord.Interactions;
@@ -28,8 +29,6 @@ public class FilmModule(
         var addedBy = Context.User.Id;
         var guild = Context.Guild.Id;
 
-        await DeferAsync();
-        
         // autocomplete return only kinopoisk ids for now
         var cacheKey = $"kinopoisk-{query}";
         FilmDb filmDb;
@@ -45,36 +44,12 @@ public class FilmModule(
         
         await filmRepo.Add(filmDb, addedBy, guild);
 
-        await FollowupAsync($" Добавлен фильм **[{filmDb.LocalizedTitle} ({filmDb.Year})](https://www.kinopoisk.ru/film/{filmDb.KinopoiskId})** в список запланированных", [
-            new EmbedBuilder
-            {
-                ThumbnailUrl = filmDb.PreviewImageUrl,
-                Description = filmDb.Description,
-                Fields =
-                [
-                    new EmbedFieldBuilder()
-                    {
-                        Name = "Жанр",
-                        IsInline = true,
-                        Value = string.Join(", ", filmDb.Genres)
-                    },
-                    new EmbedFieldBuilder
-                    {
-                        Name = "Длительность",
-                        IsInline = true,
-                        Value = filmDb.Duration != null
-                            ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(filmDb.Duration)).ToString("HH:mm")
-                            : "Неизвестно"
-                    },
-                    new EmbedFieldBuilder()
-                    {
-                        Name = "Рейтинг",
-                        IsInline = true,
-                        Value = filmDb.Rating.ToString(CultureInfo.InvariantCulture) ?? "-"
-                    }
-                ]
-            }.Build()
-        ]);
+        var embed = EmbedBuilderProvider.GetShortFilmInfoEmbed(filmDb).Build();
+
+        await RespondAsync(
+            $"Добавлен фильм **[{filmDb.LocalizedTitle} ({filmDb.Year})]({KinopoiskHelper.BuildUrl(filmDb.KinopoiskId!.Value)})** в список запланированных",
+            [embed]
+        );
     }
 
     [SlashCommand("list", "Get list of films")]
@@ -128,44 +103,11 @@ public class FilmModule(
             .OrderBy(x => x.Id)
             .FirstAsync();
 
-        await DeferAsync();
+        var embed = EmbedBuilderProvider.GetFullFilmInfoEmbed(pickedFilm.Film).Build();
 
-        await FollowupAsync($"🎲 Случайным образом выбран фильм **[{pickedFilm.Film.LocalizedTitle} ({pickedFilm.Film.Year})](https://www.kinopoisk.ru/film/{pickedFilm.Film.KinopoiskId})**", [
-            new EmbedBuilder
-            {
-                ImageUrl = pickedFilm.Film.ImageUrl,
-                Description = pickedFilm.Film.Description,
-                Fields =
-                [
-                    new EmbedFieldBuilder()
-                    {
-                        Name = "Страна",
-                        IsInline = true,
-                        Value = string.Join(", ", pickedFilm.Film.Countries)
-                    },
-                    new EmbedFieldBuilder()
-                    {
-                        Name = "Жанр",
-                        IsInline = true,
-                        Value = string.Join(", ", pickedFilm.Film.Genres)
-                    },
-                    new EmbedFieldBuilder
-                    {
-                        Name = "Длительность",
-                        IsInline = true,
-                        Value = pickedFilm.Film.Duration != null
-                            ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(pickedFilm.Film.Duration)).ToString("HH:mm")
-                            : "Неизвестно"
-                    },
-                    new EmbedFieldBuilder()
-                    {
-                        Name = "Рейтинг IMDB",
-                        IsInline = true,
-                        Value = pickedFilm.Film.Rating.ToString(new CultureInfo("ru-RU")) ?? "-"
-                    }
-                ]
-            }.Build()
-        ]);
+        await RespondAsync(
+            $"🎲 Случайным образом выбран фильм **[{pickedFilm.Film.LocalizedTitle} ({pickedFilm.Film.Year})]({KinopoiskHelper.BuildUrl(pickedFilm.Film.KinopoiskId!.Value)})**",
+            [embed]);
     }
     
     [SlashCommand("remove", "Remove film from list")]

@@ -16,6 +16,7 @@ public class DbFilmRepository(
         var filmDb = await dbContext.Films
             .Include(x => x.Guilds.Where(s => s.GuildId == guildId))
             .ThenInclude(x => x.Members)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.KinopoiskId == film.KinopoiskId, ct);
         
         if (filmDb == null)
