@@ -61,6 +61,7 @@ public class Program
             services.AddMemoryCache();
             
             services.Configure<CattobotOptions>(configuration.GetSection("Cattobot"));
+            services.Configure<FilmsOptions>(configuration.GetSection("Films"));
 
             # region Entity Framework
             

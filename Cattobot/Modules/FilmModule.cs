@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text;
 using Cattobot.AutocompleteHandlers;
+using Cattobot.Configuration;
 using Cattobot.Db.Models;
 using Cattobot.Db.Models.Enums;
 using Cattobot.Exceptions;
@@ -10,13 +11,15 @@ using Cattobot.Services.Abstractions;
 using Discord;
 using Discord.Interactions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Cattobot.Modules;
 
 [Group("film", "Film Commands")]
 public class FilmModule(
     IFilmRepository filmRepo,
-    IFilmService filmService
+    IFilmService filmService,
+    IOptions<FilmsOptions> options
     ) : InteractionModuleBase
 {
     [SlashCommand("add", "Добавить фильм в список запланированных")]
@@ -47,8 +50,7 @@ public class FilmModule(
 
         await RespondAsync(
             $"Добавлен фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** в список запланированных",
-            [EmbedBuilderProvider.GetShortFilmInfoEmbed(filmDb).Build()]
-        );
+            [EmbedBuilderProvider.GetShortFilmInfoEmbed(filmDb).Build()]);
     }
 
     [SlashCommand("list", "Получить список добавленных фильмов")]
@@ -97,16 +99,25 @@ public class FilmModule(
 
         var filmCount = await filmsQuery.CountAsync();
 
+        if (filmCount == 0)
+        {
+            await RespondAsync("Список запланированных фильмов пуст", ephemeral: true);
+            return;
+        }
+
         var pickedFilm = await filmsQuery
             .Skip(random.Next(0, filmCount - 1))
             .OrderBy(x => x.Id)
             .FirstAsync();
 
-        var embed = EmbedBuilderProvider.GetFullFilmInfoEmbed(pickedFilm.Film).Build();
-
+        var url = options.Value.KinopoiskWatchLink.Replace($"{{{nameof(FilmDb.KinopoiskId)}}}",
+            pickedFilm.Film.KinopoiskId.ToString());
         await RespondAsync(
             $"🎲 Случайным образом выбран фильм **{FilmHelper.BuildTitleWithMarkdownUrl(pickedFilm.Film)}**",
-            [embed]);
+            [EmbedBuilderProvider.GetFullFilmInfoEmbed(pickedFilm.Film).Build()],
+            components: new ComponentBuilder()
+                .WithButton("Смотреть", url: url, style: ButtonStyle.Link)
+                .Build());
     }
     
     [SlashCommand("remove", "Убрать фильм из списка")]
