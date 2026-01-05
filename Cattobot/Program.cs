@@ -103,6 +103,8 @@ public class Program
 
             services.AddKinopoiskIntegration(configuration);
             services.AddScoped<IFilmRepository, DbFilmRepository>();
+            services.AddScoped<IFilmService, FilmService>();
+            services.AddScoped<IButtonHandler, ButtonHandler>();
         });
 
         return builder;
@@ -113,6 +115,7 @@ public class Program
         var client = _serviceProvider.GetRequiredService<DiscordSocketClient>();
         var interactionService = _serviceProvider.GetRequiredService<InteractionService>();
         var config = _serviceProvider.GetRequiredService<IOptions<CattobotOptions>>();
+        var buttonHandler = _serviceProvider.GetRequiredService<IButtonHandler>();
         var logger = _serviceProvider.GetRequiredService<ILogger<DiscordSocketClient>>();
 
         client.Log += LogAsync;
@@ -133,6 +136,8 @@ public class Program
             var ctx = new SocketInteractionContext(client, x);
             await interactionService.ExecuteCommandAsync(ctx, _serviceProvider);
         };
+
+        client.ButtonExecuted += buttonHandler.Handle;
 
         await client.LoginAsync(TokenType.Bot, config.Value.Token);
         await client.StartAsync();

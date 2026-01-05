@@ -1,58 +1,57 @@
+using System.ComponentModel;
 using System.Text;
 using Cattobot.AutocompleteHandlers;
 using Cattobot.Db.Models;
 using Cattobot.Db.Models.Enums;
+using Cattobot.Exceptions;
 using Cattobot.Helpers;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
 using Discord;
 using Discord.Interactions;
-using Kinopoisk.Gateway;
-using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Cattobot.Modules;
 
 [Group("film", "Film Commands")]
 public class FilmModule(
-    IFilmsClient kinopoiskFilmsClient,
     IFilmRepository filmRepo,
-    IMapper mapper,
-    IMemoryCache cache
+    IFilmService filmService
     ) : InteractionModuleBase
 {
-    [SlashCommand("add", "Add a new film from Kinopoisk")]
+    [SlashCommand("add", "Добавить фильм в список запланированных")]
     public async Task AddKinopoisk(
         [Autocomplete(typeof(KinopoiskAutocompleteHandler))] int query)
     {
-        var addedBy = Context.User.Id;
-        var guild = Context.Guild.Id;
+        var userId = Context.User.Id;
+        var guildId = Context.Guild.Id;
 
-        // autocomplete return only kinopoisk ids for now
-        var cacheKey = $"kinopoisk-{query}";
         FilmDb filmDb;
-        if (cache.TryGetValue(cacheKey, out FilmSearchResponse_films? cachedFilm) && cachedFilm != null)
+        try
         {
-            filmDb = mapper.Map<FilmDb>(cachedFilm);
+            filmDb = await filmService.AddFromKinopoisk(query, userId, guildId);
         }
-        else
+        catch (FilmAlreadyExistsAsNonPlannedException)
         {
-            var film = await kinopoiskFilmsClient.FilmsAsync(query);
-            filmDb = mapper.Map<FilmDb>(film!);
+            await RespondAsync("Данный фильм уже был просмотрен ранее",
+                ephemeral: true,
+                components: new ComponentBuilder().WithButton("Всё равно добавить", $"filmAdd-{query}")
+                    .Build());
+            return;
         }
-        
-        await filmRepo.Add(filmDb, addedBy, guild);
-
-        var embed = EmbedBuilderProvider.GetShortFilmInfoEmbed(filmDb).Build();
+        catch (FilmAlreadyExistsException)
+        {
+            await RespondAsync("Фильм уже в вашем списке запланированных", ephemeral: true);
+            return;
+        }
 
         await RespondAsync(
-            $"Добавлен фильм **[{filmDb.LocalizedTitle} ({filmDb.Year})]({KinopoiskHelper.BuildUrl(filmDb.KinopoiskId!.Value)})** в список запланированных",
-            [embed]
+            $"Добавлен фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** в список запланированных",
+            [EmbedBuilderProvider.GetShortFilmInfoEmbed(filmDb).Build()]
         );
     }
 
-    [SlashCommand("list", "Get list of films")]
+    [SlashCommand("list", "Получить список добавленных фильмов")]
     public async Task List(IUser? user = null)
     {
         var guildId = Context.Guild.Id;
@@ -87,7 +86,7 @@ public class FilmModule(
         await RespondWithFileAsync(stream, title);
     }
     
-    [SlashCommand("roll", "Get random film from list")]
+    [SlashCommand("roll", "Получить случайно выбранный фильм из запланированных")]
     public async Task Roll()
     {
         var random = new Random(DateTime.UtcNow.Millisecond);
@@ -106,11 +105,11 @@ public class FilmModule(
         var embed = EmbedBuilderProvider.GetFullFilmInfoEmbed(pickedFilm.Film).Build();
 
         await RespondAsync(
-            $"🎲 Случайным образом выбран фильм **[{pickedFilm.Film.LocalizedTitle} ({pickedFilm.Film.Year})]({KinopoiskHelper.BuildUrl(pickedFilm.Film.KinopoiskId!.Value)})**",
+            $"🎲 Случайным образом выбран фильм **{FilmHelper.BuildTitleWithMarkdownUrl(pickedFilm.Film)}**",
             [embed]);
     }
     
-    [SlashCommand("remove", "Remove film from list")]
+    [SlashCommand("remove", "Убрать фильм из списка")]
     public async Task Remove(
         [Autocomplete(typeof(GuildMemberFilmsAutocompleteHandler))] string query
     )
@@ -123,7 +122,7 @@ public class FilmModule(
         await RespondAsync($"Фильм **[{film.LocalizedTitle}]** удалён из вашего списка");
     }
     
-    [SlashCommand("mark-as-watched", "Marks film as watched")]
+    [SlashCommand("mark-as-watched", "Пометить фильм как просмотренный")]
     public async Task MarkAsWatched(
         [Autocomplete(typeof(NonWatchedFilmsAutocompleteHandler))] string query)
     {
@@ -132,10 +131,10 @@ public class FilmModule(
         var film = await filmRepo.Get(id);
         await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Completed);
 
-        await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как просмотренный");
+        await RespondAsync($"Фильм **{film.LocalizedTitle}** просмотрен");
     }
     
-    [SlashCommand("mark-as-planned", "Marks film as planned")]
+    [SlashCommand("mark-as-planned", "Пометить фильм как запланированный")]
     public async Task MarkAsPlanned(
         [Autocomplete(typeof(NonPlannedFilmsAutocompleteHandler))] string query)
     {
@@ -144,10 +143,10 @@ public class FilmModule(
         var film = await filmRepo.Get(id);
         await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Planned);
 
-        await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как запланированный");
+        await RespondAsync($"Фильм **{film.LocalizedTitle}** запланирован");
     }
     
-    [SlashCommand("mark-as-abandoned", "Marks film as abandoned")]
+    [SlashCommand("mark-as-abandoned", "Пометить фильм как брошенный")]
     public async Task MarkAsAbandoned(
         [Autocomplete(typeof(NonAbandonedFilmsAutocompleteHandler))] string query)
     {
@@ -156,6 +155,6 @@ public class FilmModule(
         var film = await filmRepo.Get(id);
         await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Abandoned);
 
-        await RespondAsync($"Фильм **{film.LocalizedTitle}** помечен как брошенный");
+        await RespondAsync($"Фильм **{film.LocalizedTitle}** брошен");
     }
 }

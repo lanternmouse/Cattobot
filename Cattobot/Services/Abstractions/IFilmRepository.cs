@@ -5,7 +5,7 @@ namespace Cattobot.Services.Abstractions;
 
 public interface IFilmRepository
 {
-    Task<Guid> Add(FilmDb film, ulong userId, ulong guildId, CancellationToken ct = default);
+    Task<Guid> Add(FilmDb film, ulong userId, ulong guildId, FilmStatus status, CancellationToken ct = default);
 
     IQueryable<FilmGuildDb> GetGuildListQuery(ulong guildId, ulong? userId, FilmStatus[] statuses,
         string? search = null);

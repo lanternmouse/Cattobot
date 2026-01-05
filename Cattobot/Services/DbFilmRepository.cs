@@ -11,7 +11,7 @@ public class DbFilmRepository(
     ) : IFilmRepository
 {
     public async Task<Guid> Add(FilmDb film, ulong userId, ulong guildId, 
-        CancellationToken ct = default)
+        FilmStatus status, CancellationToken ct = default)
     {
         var filmDb = await dbContext.Films
             .Include(x => x.Guilds.Where(s => s.GuildId == guildId))
@@ -31,10 +31,11 @@ public class DbFilmRepository(
             guildState = new FilmGuildDb
             {
                 GuildId = guildId,
-                FilmStatus = FilmStatus.Planned
             };
             filmDb.Guilds.Add(guildState);
         }
+        guildState.FilmStatus = status;
+        guildState.StatusOn = DateTime.UtcNow;
 
         var guildMember = guildState.Members.FirstOrDefault(x => x.UserId == userId);
         if (guildMember == null)
@@ -58,7 +59,7 @@ public class DbFilmRepository(
             .Include(x => x.Members)
             .Where(x => x.GuildId == guildId)
             .Where(g => !userId.HasValue || g.Members.Any(m => m.UserId == userId))
-            .OrderByDescending(x => x.StatusOn)
+            .OrderByDescending(x => x.FilmId)
             .AsQueryable();
 
         if (statuses.Length != 0)

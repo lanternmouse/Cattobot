@@ -22,7 +22,7 @@ public class NonPlannedFilmsAutocompleteHandler(
 
         var results = filmSuggestions.Select(s => new AutocompleteResult(
             $"{s.Film.LocalizedTitle} ({s.Film.Year})",
-            s.Id.ToString()
+            s.Film.Id.ToString()
         ));
 
         return AutocompletionResult.FromSuccess(results.Take(25));
