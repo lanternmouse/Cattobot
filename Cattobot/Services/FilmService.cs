@@ -51,4 +51,25 @@ public class FilmService(
         
         return filmDb;
     }
+
+    public async Task<FilmDb> MarkAsWatched(Guid id, ulong guildId)
+    {
+        var film = await filmRepo.Get(id);
+        await filmRepo.SetGuildStatus(id, guildId, FilmStatus.Completed);
+        return film;
+    }
+    
+    public async Task<FilmDb> MarkAsPlanned(Guid id, ulong guildId)
+    {
+        var film = await filmRepo.Get(id);
+        await filmRepo.SetGuildStatus(id, guildId, FilmStatus.Planned);
+        return film;
+    }
+    
+    public async Task<FilmDb> MarkAsAbandoned(Guid id, ulong guildId)
+    {
+        var film = await filmRepo.Get(id);
+        await filmRepo.SetGuildStatus(id, guildId, FilmStatus.Abandoned);
+        return film;
+    }
 }

@@ -1,3 +1,4 @@
+using Cattobot.Db.Models;
 using Cattobot.Helpers;
 using Cattobot.Services.Abstractions;
 using Discord;
@@ -11,7 +12,9 @@ public class ButtonHandler(
 {
     public async Task Handle(SocketMessageComponent component)
     {
-        var command = component.Data.CustomId.Split("-");
+        var command = component.Data.CustomId.Split("_");
+        FilmDb filmDb;
+        Guid filmId;
         switch (command[0])
         {
             case "filmAdd":
@@ -19,8 +22,7 @@ public class ButtonHandler(
 
                 await component.DeferAsync();
                 
-                var filmDb =
-                    await filmService.AddFromKinopoisk(kinopoiskId, component.User.Id, component.GuildId!.Value, true);
+                filmDb = await filmService.AddFromKinopoisk(kinopoiskId, component.User.Id, component.GuildId!.Value, true);
 
                 await component.DeleteOriginalResponseAsync();
                 
@@ -29,6 +31,26 @@ public class ButtonHandler(
                     embed: EmbedBuilderProvider.GetShortFilmInfoEmbed(filmDb).Build(),
                     allowedMentions: AllowedMentions.None);
                 
+                break;
+            case "markAsWatched":
+                filmId = Guid.Parse(command[1]);
+
+                filmDb = await filmService.MarkAsWatched(filmId, component.GuildId!.Value);
+
+                await component.RespondAsync(
+                    $"<@{component.User.Id}> отмечает фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** как **просмотренный**",
+                    allowedMentions: AllowedMentions.None);
+
+                break;
+            case "markAsAbandoned":
+                filmId = Guid.Parse(command[1]);
+
+                filmDb = await filmService.MarkAsAbandoned(filmId, component.GuildId!.Value);
+
+                await component.RespondAsync(
+                    $"<@{component.User.Id}> отмечает фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** как **брошенный**",
+                    allowedMentions: AllowedMentions.None);
+
                 break;
         }
     }

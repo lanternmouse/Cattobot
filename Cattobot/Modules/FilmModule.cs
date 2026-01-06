@@ -38,7 +38,7 @@ public class FilmModule(
         {
             await RespondAsync("Данный фильм уже был просмотрен ранее",
                 ephemeral: true,
-                components: new ComponentBuilder().WithButton("Всё равно добавить", $"filmAdd-{query}")
+                components: new ComponentBuilder().WithButton("Всё равно добавить", $"filmAdd_{query}")
                     .Build());
             return;
         }
@@ -117,6 +117,10 @@ public class FilmModule(
             [EmbedBuilderProvider.GetFullFilmInfoEmbed(pickedFilm.Film).Build()],
             components: new ComponentBuilder()
                 .WithButton("Смотреть", url: url, style: ButtonStyle.Link)
+                .WithButton("Пометить как просмотренный", customId: $"markAsWatched_{pickedFilm.Film.Id}",
+                    style: ButtonStyle.Primary)
+                .WithButton("Пометить как брошенный", customId: $"markAsAbandoned_{pickedFilm.Film.Id}",
+                    style: ButtonStyle.Secondary)
                 .Build());
     }
     
@@ -130,7 +134,7 @@ public class FilmModule(
         var film = await filmRepo.Get(id);
         await filmRepo.RemoveGuildMember(id, Context.User.Id, Context.Guild.Id);
 
-        await RespondAsync($"Фильм **[{film.LocalizedTitle}]** удалён из вашего списка");
+        await RespondAsync($"Фильм **{FilmHelper.BuildTitleWithMarkdownUrl(film)}** удалён из вашего списка");
     }
     
     [SlashCommand("mark-as-watched", "Пометить фильм как просмотренный")]
@@ -138,11 +142,10 @@ public class FilmModule(
         [Autocomplete(typeof(NonWatchedFilmsAutocompleteHandler))] string query)
     {
         var id = Guid.Parse(query);
-        
-        var film = await filmRepo.Get(id);
-        await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Completed);
 
-        await RespondAsync($"Фильм **{film.LocalizedTitle}** просмотрен");
+        var film = await filmService.MarkAsWatched(id, Context.Guild.Id);
+
+        await RespondAsync($"Фильм **{FilmHelper.BuildTitleWithMarkdownUrl(film)}** отмечен как **просмотренный**");
     }
     
     [SlashCommand("mark-as-planned", "Пометить фильм как запланированный")]
@@ -151,10 +154,9 @@ public class FilmModule(
     {
         var id = Guid.Parse(query);
         
-        var film = await filmRepo.Get(id);
-        await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Planned);
+        var film = await filmService.MarkAsPlanned(id, Context.Guild.Id);
 
-        await RespondAsync($"Фильм **{film.LocalizedTitle}** запланирован");
+        await RespondAsync($"Фильм **{FilmHelper.BuildTitleWithMarkdownUrl(film)}** отмечен как **запланированный**");
     }
     
     [SlashCommand("mark-as-abandoned", "Пометить фильм как брошенный")]
@@ -162,10 +164,9 @@ public class FilmModule(
         [Autocomplete(typeof(NonAbandonedFilmsAutocompleteHandler))] string query)
     {
         var id = Guid.Parse(query);
-        
-        var film = await filmRepo.Get(id);
-        await filmRepo.SetGuildStatus(id, Context.Guild.Id, FilmStatus.Abandoned);
 
-        await RespondAsync($"Фильм **{film.LocalizedTitle}** брошен");
+        var film = await filmService.MarkAsAbandoned(id, Context.Guild.Id);
+
+        await RespondAsync($"Фильм **{FilmHelper.BuildTitleWithMarkdownUrl(film)}** отмечен как **брошенный**");
     }
 }
