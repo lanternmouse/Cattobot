@@ -52,6 +52,40 @@ public class FilmService(
         return filmDb;
     }
 
+    public async Task<FilmDb> PickRandom(ulong guildId)
+    {
+        var random = new Random(DateTime.UtcNow.Millisecond);
+
+        var participantsQuery = filmRepo.GetGuildListQuery(guildId, null, [FilmStatus.Planned])
+            .Include(x => x.Members)
+            .SelectMany(x => x.Members)
+            .GroupBy(x => x.UserId)
+            .Select(x => x.First().UserId);
+        
+        var participantsCount = await participantsQuery.CountAsync();
+        
+        if (participantsCount == 0)
+        {
+            throw new EmptyFilmListException();
+        }
+
+        var pickedParticipantId = await participantsQuery
+            .OrderBy(x => x)
+            .Skip(random.Next(0, participantsCount - 1))
+            .FirstAsync();
+        
+        var filmsQuery = filmRepo.GetGuildListQuery(guildId, pickedParticipantId, [FilmStatus.Planned]);
+
+        var filmCount = await filmsQuery.CountAsync();
+
+        var pickedFilm = await filmsQuery
+            .OrderBy(x => x.Id)
+            .Skip(random.Next(0, filmCount - 1))
+            .FirstAsync();
+
+        return pickedFilm.Film;
+    }
+
     public async Task<FilmDb> MarkAsWatched(Guid id, ulong guildId)
     {
         var film = await filmRepo.Get(id);

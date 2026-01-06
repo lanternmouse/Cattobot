@@ -91,35 +91,28 @@ public class FilmModule(
     [SlashCommand("roll", "Получить случайно выбранный фильм из запланированных")]
     public async Task Roll()
     {
-        var random = new Random(DateTime.UtcNow.Millisecond);
-        
-        var guildId = Context.Guild.Id;
-
-        var filmsQuery = filmRepo.GetGuildListQuery(guildId, null, [FilmStatus.Planned]);
-
-        var filmCount = await filmsQuery.CountAsync();
-
-        if (filmCount == 0)
+        FilmDb film;
+        try
+        {
+            film = await filmService.PickRandom(Context.Guild.Id);
+        }
+        catch(EmptyFilmListException)
         {
             await RespondAsync("Список запланированных фильмов пуст", ephemeral: true);
             return;
         }
 
-        var pickedFilm = await filmsQuery
-            .Skip(random.Next(0, filmCount - 1))
-            .OrderBy(x => x.Id)
-            .FirstAsync();
-
         var url = options.Value.KinopoiskWatchLink.Replace($"{{{nameof(FilmDb.KinopoiskId)}}}",
-            pickedFilm.Film.KinopoiskId.ToString());
+            film.KinopoiskId.ToString());
+        
         await RespondAsync(
-            $"🎲 Случайным образом выбран фильм **{FilmHelper.BuildTitleWithMarkdownUrl(pickedFilm.Film)}**",
-            [EmbedBuilderProvider.GetFullFilmInfoEmbed(pickedFilm.Film).Build()],
+            $"🎲 Случайным образом выбран фильм **{FilmHelper.BuildTitleWithMarkdownUrl(film)}**",
+            [EmbedBuilderProvider.GetFullFilmInfoEmbed(film).Build()],
             components: new ComponentBuilder()
                 .WithButton("Смотреть", url: url, style: ButtonStyle.Link)
-                .WithButton("Пометить как просмотренный", customId: $"markAsWatched_{pickedFilm.Film.Id}",
+                .WithButton("Пометить как просмотренный", customId: $"markAsWatched_{film.Id}",
                     style: ButtonStyle.Primary)
-                .WithButton("Пометить как брошенный", customId: $"markAsAbandoned_{pickedFilm.Film.Id}",
+                .WithButton("Пометить как брошенный", customId: $"markAsAbandoned_{film.Id}",
                     style: ButtonStyle.Secondary)
                 .Build());
     }
