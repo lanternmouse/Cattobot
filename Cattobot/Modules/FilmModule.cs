@@ -47,6 +47,11 @@ public class FilmModule(
             await RespondAsync("Фильм уже в вашем списке запланированных", ephemeral: true);
             return;
         }
+        catch (Exception e)
+        {
+            await RespondAsync(e.Message, ephemeral: true);
+            return;
+        }
 
         await RespondAsync(
             $"Добавлен фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** в список запланированных",
@@ -96,9 +101,14 @@ public class FilmModule(
         {
             film = await filmService.PickRandom(Context.Guild.Id);
         }
-        catch(EmptyFilmListException)
+        catch (EmptyFilmListException)
         {
             await RespondAsync("Список запланированных фильмов пуст", ephemeral: true);
+            return;
+        }
+        catch (Exception e)
+        {
+            await RespondAsync(e.Message, ephemeral: true);
             return;
         }
 
