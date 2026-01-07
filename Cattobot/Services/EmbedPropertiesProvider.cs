@@ -1,91 +1,91 @@
 using System.Globalization;
 using Cattobot.Db.Models;
-using Discord;
+using NetCord.Rest;
 
 namespace Cattobot.Services;
 
-public static class EmbedBuilderProvider
+public static class EmbedPropertiesProvider
 {
-    public static EmbedBuilder GetShortFilmInfoEmbed(FilmDb filmDb)
+    public static EmbedProperties GetShortFilmInfoEmbed(FilmDb filmDb)
     {
-        return new EmbedBuilder
+        return new EmbedProperties
         {
-            ThumbnailUrl = filmDb.PreviewImageUrl,
+            Thumbnail = new EmbedThumbnailProperties(filmDb.PreviewImageUrl),
             Fields =
             [
-                new EmbedFieldBuilder()
+                new EmbedFieldProperties
                 {
                     Name = "Описание",
-                    IsInline = false,
+                    Inline = false,
                     Value = filmDb.Description
                 },
-                new EmbedFieldBuilder()
+                new EmbedFieldProperties
                 {
                     Name = "Жанр",
-                    IsInline = false,
+                    Inline = false,
                     Value = string.Join(", ", filmDb.Genres)
                 },
-                new EmbedFieldBuilder()
+                new EmbedFieldProperties
                 {
                     Name = "Страна",
-                    IsInline = true,
+                    Inline = true,
                     Value = string.Join(", ", filmDb.Countries)
                 },
-                new EmbedFieldBuilder
+                new EmbedFieldProperties
                 {
                     Name = "Длительность",
-                    IsInline = true,
+                    Inline = true,
                     Value = filmDb.Duration != null
                         ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(filmDb.Duration)).ToString("HH:mm")
                         : "Неизвестно"
                 },
-                new EmbedFieldBuilder()
+                new EmbedFieldProperties
                 {
                     Name = "Рейтинг",
-                    IsInline = true,
+                    Inline = true,
                     Value = filmDb.Rating.ToString(new CultureInfo("ru-RU")) ?? "-"
                 }
             ]
         };
     }
 
-    public static EmbedBuilder GetFullFilmInfoEmbed(FilmDb filmDb)
+    public static EmbedProperties GetFullFilmInfoEmbed(FilmDb filmDb)
     {
-        return new EmbedBuilder
+        return new EmbedProperties
         {
-            ImageUrl = filmDb.ImageUrl,
+            Image = new EmbedImageProperties(filmDb.ImageUrl),
             Fields =
             [
-                new EmbedFieldBuilder()
+                new EmbedFieldProperties
                 {
                     Name = "Описание",
-                    IsInline = false,
+                    Inline = false,
                     Value = filmDb.Description
                 },
-                new EmbedFieldBuilder()
+                new EmbedFieldProperties
                 {
                     Name = "Жанр",
-                    IsInline = false,
+                    Inline = false,
                     Value = string.Join(", ", filmDb.Genres)
                 },
-                new EmbedFieldBuilder()
+                new EmbedFieldProperties
                 {
                     Name = "Страна",
-                    IsInline = true,
+                    Inline = true,
                     Value = string.Join(", ", filmDb.Countries)
                 },
-                new EmbedFieldBuilder
+                new EmbedFieldProperties
                 {
                     Name = "Длительность",
-                    IsInline = true,
+                    Inline = true,
                     Value = filmDb.Duration != null
                         ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(filmDb.Duration)).ToString("HH:mm")
                         : "Неизвестно"
                 },
-                new EmbedFieldBuilder()
+                new EmbedFieldProperties
                 {
                     Name = "Рейтинг",
-                    IsInline = true,
+                    Inline = true,
                     Value = filmDb.Rating.ToString(new CultureInfo("ru-RU")) ?? "-"
                 }
             ]

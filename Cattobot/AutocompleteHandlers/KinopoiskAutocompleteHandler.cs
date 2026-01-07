@@ -1,21 +1,22 @@
-using Discord;
-using Discord.Interactions;
 using Kinopoisk.Gateway;
 using Microsoft.Extensions.Caching.Memory;
+using NetCord;
+using NetCord.Rest;
+using NetCord.Services.ApplicationCommands;
 
 namespace Cattobot.AutocompleteHandlers;
 
-public class KinopoiskAutocompleteHandler(
+public class KinopoiskAutocompleteProvider(
     IFilmsClient kinopoiskFilmsClient,
     IMemoryCache cache
-) : AutocompleteHandler
+) : IAutocompleteProvider<AutocompleteInteractionContext>
 {
-    public override async Task<AutocompletionResult> GenerateSuggestionsAsync(IInteractionContext context,
-        IAutocompleteInteraction autocompleteInteraction, IParameterInfo parameter, IServiceProvider services)
+    public async ValueTask<IEnumerable<ApplicationCommandOptionChoiceProperties>?> GetChoicesAsync(
+        ApplicationCommandInteractionDataOption option, AutocompleteInteractionContext context)
     {
-        var value = autocompleteInteraction.Data.Current.Value.ToString();
-        if (value == null || value.Length < 2)
-            return AutocompletionResult.FromSuccess([]);
+        var value = option.Value;
+        
+        if (value == null || value.Length < 2) return [];
 
         var cacheKey = $"kinopoisk-search-{value}";
         var cacheOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromDays(3));
@@ -39,11 +40,11 @@ public class KinopoiskAutocompleteHandler(
             }
         }
 
-        var results = filmSuggestions.Films.Select(s => new AutocompleteResult(
+        var results = filmSuggestions.Films.Select(s => new ApplicationCommandOptionChoiceProperties(
             $"{s.NameRu} ({s.Year}), {s.NameEn}",
             s.FilmId.ToString()
         ));
 
-        return AutocompletionResult.FromSuccess(results.Take(25));
+        return results.Take(25);
     }
 }

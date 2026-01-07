@@ -3,19 +3,21 @@ using Cattobot.Configuration;
 using Cattobot.Db;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
-using Discord;
-using Discord.Interactions;
-using Discord.WebSocket;
 using Kinopoisk.Gateway;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using NetCord;
+using NetCord.Gateway;
+using NetCord.Hosting.Gateway;
+using NetCord.Hosting.Services;
+using NetCord.Hosting.Services.ApplicationCommands;
+using NetCord.Hosting.Services.ComponentInteractions;
+using NetCord.Services.ComponentInteractions;
 using Serilog;
-using Serilog.Events;
+using YtDlp.Gateway;
 
 namespace Cattobot;
 
@@ -25,14 +27,16 @@ public class Program
 
     public static async Task Main(string[] args)
     {
-        var builder = CreateHostBuilder(args).Build();
+        var host = CreateHostBuilder(args).Build();
 
-        _serviceProvider = builder.Services.CreateScope().ServiceProvider;
+        _serviceProvider = host.Services.CreateScope().ServiceProvider;
 
         var db = _serviceProvider.GetRequiredService<CattobotDbContext>();
         await db.Database.MigrateAsync();
 
-        await RunAsync();
+        host.AddModules(typeof(Program).Assembly);
+
+        await host.RunAsync();
     }
     
     private static IHostBuilder CreateHostBuilder(string[] args)
@@ -73,23 +77,12 @@ public class Program
 
             # region Discord
 
-            services.AddSingleton(new DiscordSocketConfig()
+            services.AddDiscordGateway(o =>
             {
-                GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates,
-                LogLevel = LogSeverity.Info
-            });
-            services.AddSingleton<DiscordSocketClient>();
-            services.AddSingleton(new InteractionServiceConfig
-            {
-                AutoServiceScopes = true,
-                ThrowOnError = true,
-                DefaultRunMode = RunMode.Async
-            });
-            services.AddSingleton<InteractionService>(sp =>
-                new InteractionService(
-                    sp.GetRequiredService<DiscordSocketClient>(),
-                    sp.GetRequiredService<InteractionServiceConfig>()
-                ));
+                o.Intents = GatewayIntents.Guilds | GatewayIntents.Guilds | GatewayIntents.GuildVoiceStates;
+            })
+            .AddApplicationCommands()
+            .AddComponentInteractions<ButtonInteraction, ButtonInteractionContext>();
 
             # endregion
 
@@ -103,61 +96,11 @@ public class Program
             # endregion
 
             services.AddKinopoiskIntegration(configuration);
+            services.AddYtDlp(configuration);
             services.AddScoped<IFilmRepository, DbFilmRepository>();
             services.AddScoped<IFilmService, FilmService>();
-            services.AddScoped<IButtonHandler, ButtonHandler>();
         });
 
         return builder;
-    }
-
-    private static async Task RunAsync()
-    {
-        var client = _serviceProvider.GetRequiredService<DiscordSocketClient>();
-        var interactionService = _serviceProvider.GetRequiredService<InteractionService>();
-        var config = _serviceProvider.GetRequiredService<IOptions<CattobotOptions>>();
-        var buttonHandler = _serviceProvider.GetRequiredService<IButtonHandler>();
-
-        client.Log += LogAsync;
-
-        client.Ready += async () =>
-        {
-            await interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
-
-#if DEBUG
-            await interactionService.RegisterCommandsToGuildAsync(983041476315459615, true);
-#else
-            await interactionService.RegisterCommandsGloballyAsync(true);
-#endif
-        };
-
-        client.InteractionCreated += async (x) =>
-        {
-            var ctx = new SocketInteractionContext(client, x);
-            await interactionService.ExecuteCommandAsync(ctx, _serviceProvider);
-        };
-
-        client.ButtonExecuted += buttonHandler.Handle;
-
-        await client.LoginAsync(TokenType.Bot, config.Value.Token);
-        await client.StartAsync();
-
-        await Task.Delay(Timeout.Infinite);
-    }
-    
-    private static async Task LogAsync(LogMessage message)
-    {
-        var severity = message.Severity switch
-        {
-            LogSeverity.Critical => LogEventLevel.Fatal,
-            LogSeverity.Error => LogEventLevel.Error,
-            LogSeverity.Warning => LogEventLevel.Warning,
-            LogSeverity.Info => LogEventLevel.Information,
-            LogSeverity.Verbose => LogEventLevel.Verbose,
-            LogSeverity.Debug => LogEventLevel.Debug,
-            _ => LogEventLevel.Information
-        };
-        Log.Write(severity, message.Exception, "[{Source}] {Message}", message.Source, message.Message);
-        await Task.CompletedTask;
     }
 }
