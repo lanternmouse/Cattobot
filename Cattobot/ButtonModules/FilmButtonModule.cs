@@ -31,8 +31,9 @@ public class FilmButtonModule(IFilmService filmService) : ComponentInteractionMo
         var filmDb = await filmService.MarkAsWatched(guid, Context.Guild!.Id);
 
         return new InteractionMessageProperties()
-            .WithContent($"<@{Context.User.Id}> отмечает фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** как **просмотренный**")
-            .WithFlags(MessageFlags.Ephemeral);
+            .WithContent(
+                $"<@{Context.User.Id}> отмечает фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** как **просмотренный**")
+            .WithAllowedMentions(new AllowedMentionsProperties().WithAllowedUsers([]));
     }
     
     [ComponentInteraction("filmMarkAsAbandoned")]
@@ -42,7 +43,8 @@ public class FilmButtonModule(IFilmService filmService) : ComponentInteractionMo
         var filmDb = await filmService.MarkAsAbandoned(guid, Context.Guild!.Id);
 
         return new InteractionMessageProperties()
-            .WithContent($"<@{Context.User.Id}> отмечает фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** как **брошенный**")
+            .WithContent(
+                $"<@{Context.User.Id}> отмечает фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** как **брошенный**")
             .WithAllowedMentions(new AllowedMentionsProperties().WithAllowedUsers([]));
     }
 }
