@@ -76,7 +76,7 @@ public class Program
             services.AddSingleton(new DiscordSocketConfig()
             {
                 GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMembers | GatewayIntents.GuildVoiceStates,
-                LogLevel = LogSeverity.Verbose
+                LogLevel = LogSeverity.Info
             });
             services.AddSingleton<DiscordSocketClient>();
             services.AddSingleton(new InteractionServiceConfig
