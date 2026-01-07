@@ -60,7 +60,7 @@ jobs:
             --name cattobot-container \
             --network mynet \
             --restart unless-stopped \
-            -e Cattobot__Token="${TOKEN}" \
+            -e Discord__Token="${TOKEN}" \
             -e Kinopoisk__Token="${KINOPOISK_TOKEN}" \
             -e ConnectionStrings__Default="${CONNECTION_STRING}" \
             --add-host=host.docker.internal:host-gateway \
