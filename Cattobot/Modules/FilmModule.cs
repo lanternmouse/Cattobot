@@ -88,7 +88,7 @@ public class FilmModule(
 
         var stream = new MemoryStream(Encoding.UTF8.GetBytes(text.ToString()));
 
-        var title = "Список фильмов" + (string.IsNullOrEmpty(user?.Username) ? "" : (user!.Username + " ")) + ".txt";
+        var title = "Список фильмов" + (string.IsNullOrEmpty(user?.Username) ? "" : (" " + user!.Username)) + ".txt";
 
         await RespondWithFileAsync(stream, title);
     }
