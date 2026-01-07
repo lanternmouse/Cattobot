@@ -120,9 +120,9 @@ public class FilmModule(
             [EmbedBuilderProvider.GetFullFilmInfoEmbed(film).Build()],
             components: new ComponentBuilder()
                 .WithButton("Смотреть", url: url, style: ButtonStyle.Link)
-                .WithButton("Пометить как просмотренный", customId: $"markAsWatched_{film.Id}",
+                .WithButton("В просмотренные", customId: $"markAsWatched_{film.Id}",
                     style: ButtonStyle.Primary)
-                .WithButton("Пометить как брошенный", customId: $"markAsAbandoned_{film.Id}",
+                .WithButton("В брошенные", customId: $"markAsAbandoned_{film.Id}",
                     style: ButtonStyle.Secondary)
                 .Build());
     }

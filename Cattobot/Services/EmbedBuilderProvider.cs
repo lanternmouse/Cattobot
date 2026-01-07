@@ -21,6 +21,12 @@ public static class EmbedBuilderProvider
                 },
                 new EmbedFieldBuilder()
                 {
+                    Name = "Жанр",
+                    IsInline = false,
+                    Value = string.Join(", ", filmDb.Genres)
+                },
+                new EmbedFieldBuilder()
+                {
                     Name = "Страна",
                     IsInline = true,
                     Value = string.Join(", ", filmDb.Countries)
@@ -38,13 +44,7 @@ public static class EmbedBuilderProvider
                     Name = "Рейтинг",
                     IsInline = true,
                     Value = filmDb.Rating.ToString(new CultureInfo("ru-RU")) ?? "-"
-                },
-                new EmbedFieldBuilder()
-                {
-                    Name = "Жанр",
-                    IsInline = false,
-                    Value = string.Join(", ", filmDb.Genres)
-                },
+                }
             ]
         };
     }
@@ -64,6 +64,12 @@ public static class EmbedBuilderProvider
                 },
                 new EmbedFieldBuilder()
                 {
+                    Name = "Жанр",
+                    IsInline = false,
+                    Value = string.Join(", ", filmDb.Genres)
+                },
+                new EmbedFieldBuilder()
+                {
                     Name = "Страна",
                     IsInline = true,
                     Value = string.Join(", ", filmDb.Countries)
@@ -81,13 +87,7 @@ public static class EmbedBuilderProvider
                     Name = "Рейтинг",
                     IsInline = true,
                     Value = filmDb.Rating.ToString(new CultureInfo("ru-RU")) ?? "-"
-                },
-                new EmbedFieldBuilder()
-                {
-                    Name = "Жанр",
-                    IsInline = false,
-                    Value = string.Join(", ", filmDb.Genres)
-                },
+                }
             ]
         };
     }
