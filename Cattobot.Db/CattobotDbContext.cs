@@ -24,8 +24,8 @@ public class CattobotDbContext(DbContextOptions<CattobotDbContext> options) : Db
                 .HasMethod("gin")
                 .HasOperators("gin_trgm_ops");
 
-            b.HasIndex(x => x.KinopoiskId)
-                .HasFilter($"\"{nameof(FilmDb.KinopoiskId)}\" IS NOT NULL")
+            b.HasIndex(x => x.TmdbId)
+                .HasFilter($"\"{nameof(FilmDb.TmdbId)}\" IS NOT NULL")
                 .IsUnique(true);
         });
 
