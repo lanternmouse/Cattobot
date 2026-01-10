@@ -51,8 +51,9 @@ jobs:
           
       - name: Run new container
         env:
-          TOKEN: ${{ secrets.TOKEN }}
-          KINOPOISK_TOKEN: ${{ secrets.KINOPOISK_TOKEN }}
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
+          WIKIDATA_TOKEN: ${{ secrets.WIKIDATA_TOKEN }}
           CONNECTION_STRING: ${{ secrets.CONNECTION_STRING }}
         run: |
           echo "${CONNECTION_STRING}"
@@ -61,7 +62,8 @@ jobs:
             --network mynet \
             --restart unless-stopped \
             -e Discord__Token="${TOKEN}" \
-            -e Kinopoisk__Token="${KINOPOISK_TOKEN}" \
+            -e Tmdb__Token="${TMDB_TOKEN}" \
+            -e Wikidata__Token="${WIKIDATA_TOKEN}" \
             -e ConnectionStrings__Default="${CONNECTION_STRING}" \
             --add-host=host.docker.internal:host-gateway \
             lanternmouse/cattobot:latest

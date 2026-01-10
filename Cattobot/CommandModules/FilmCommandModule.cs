@@ -32,7 +32,7 @@ public class FilmCommandModule(
         FilmDb filmDb;
         try
         {
-            filmDb = await filmService.AddFromKinopoisk(query, userId, guildId);
+            filmDb = await filmService.AddFromTmdb(query, userId, guildId);
         }
         catch (FilmAlreadyExistsAsNonPlannedException)
         {
@@ -74,19 +74,19 @@ public class FilmCommandModule(
         var index = 1;
         text.AppendLine("Запланировано:");
         foreach (var film in films.Where(x => x.FilmStatus == FilmStatus.Planned))
-            text.AppendLine($"{index++}. {film.Film.LocalizedTitle} ({film.Film.Year})");
+            text.AppendLine($"{index++}. {film.Film.Title} ({film.Film.Year})");
         text.AppendLine();
     
         index = 1;
         text.AppendLine("Просмотрено:");
         foreach (var film in films.Where(x => x.FilmStatus == FilmStatus.Completed))
-            text.AppendLine($"{index++}. {film.Film.LocalizedTitle} ({film.Film.Year})");
+            text.AppendLine($"{index++}. {film.Film.Title} ({film.Film.Year})");
         text.AppendLine();
         
         index = 1;
         text.AppendLine("Брошено:");
         foreach (var film in films.Where(x => x.FilmStatus == FilmStatus.Abandoned))
-            text.AppendLine($"{index++}. {film.Film.LocalizedTitle} ({film.Film.Year})");
+            text.AppendLine($"{index++}. {film.Film.Title} ({film.Film.Year})");
         text.AppendLine();
     
         var stream = new MemoryStream(Encoding.UTF8.GetBytes(text.ToString()));
@@ -111,26 +111,16 @@ public class FilmCommandModule(
                 .WithContent("Список запланированных фильмов пуст")
                 .WithFlags(MessageFlags.Ephemeral);
         }
-    
-        var url = options.Value.KinopoiskWatchLink.Replace($"{{{nameof(FilmDb.KinopoiskId)}}}",
-            film.KinopoiskId.ToString());
 
         return new InteractionMessageProperties()
             .WithContent($"🎲 Случайным образом выбран фильм **{FilmHelper.BuildTitleWithMarkdownUrl(film)}**")
             .WithEmbeds([EmbedPropertiesProvider.GetFullFilmInfoEmbed(film)])
-            .WithComponents([
-                new ActionRowProperties
-                {
-                    new LinkButtonProperties(url, "Смотреть"),
-                    new ButtonProperties($"filmMarkAsWatched:{film.Id}", "В просмотренные", ButtonStyle.Primary),
-                    new ButtonProperties($"filmMarkAsAbandoned:{film.Id}", "В брошенные", ButtonStyle.Secondary),
-                }
-            ]);
+            .WithComponents([ComponentsPropertiesProvider.PickedFilmInfoComponents(film, options.Value.WatchUrl)]);
     }
     
     [SubSlashCommand("remove", "Убрать фильм из списка")]
     public async Task<InteractionMessageProperties> Remove(
-        [SlashCommandParameter(AutocompleteProviderType = typeof(KinopoiskAutocompleteProvider))] string query
+        [SlashCommandParameter(AutocompleteProviderType = typeof(GuildMemberFilmsAutocompleteHandler))] string query
     )
     {
         var id = Guid.Parse(query);

@@ -3,12 +3,12 @@ using Cattobot.Configuration;
 using Cattobot.Db;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
-using Kinopoisk.Gateway;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using NetCord;
 using NetCord.Gateway;
 using NetCord.Hosting.Gateway;
@@ -17,6 +17,8 @@ using NetCord.Hosting.Services.ApplicationCommands;
 using NetCord.Hosting.Services.ComponentInteractions;
 using NetCord.Services.ComponentInteractions;
 using Serilog;
+using TMDbLib.Client;
+using Wikidata.Gateway;
 using YtDlp.Gateway;
 
 namespace Cattobot;
@@ -33,6 +35,7 @@ public class Program
 
         var db = _serviceProvider.GetRequiredService<CattobotDbContext>();
         await db.Database.MigrateAsync();
+        await db.Films.FirstOrDefaultAsync();
 
         host.AddModules(typeof(Program).Assembly);
 
@@ -51,22 +54,39 @@ public class Program
         
         # region Logging
 
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Information()
-            .Enrich.FromLogContext()
-            .WriteTo.Console()
-            .CreateLogger();
-        builder.UseSerilog();
+        builder.UseSerilog((_, services, conf) =>
+        {
+            conf.MinimumLevel.Debug()
+                .ReadFrom.Services(services)
+                .Enrich.FromLogContext()
+                .MinimumLevel.Debug()
+                .WriteTo.Console();
+        });
         
         # endregion
-
+        
         builder.ConfigureServices(services =>
         {
             services.AddMemoryCache();
             
             services.Configure<CattobotOptions>(configuration.GetSection("Cattobot"));
             services.Configure<FilmsOptions>(configuration.GetSection("Films"));
+            services.Configure<TmdbOptions>(configuration.GetSection("Tmdb"));
 
+            # region TMDB
+
+            services.AddSingleton<TMDbClient>(x =>
+            {
+                var config = x.GetRequiredService<IOptions<TmdbOptions>>();
+                var client = new TMDbClient(config.Value.Token);
+                client.DefaultCountry = "RU";
+                client.DefaultLanguage = "ru";
+                client.DefaultImageLanguage = "ru";
+                return client;
+            });
+            
+            # endregion
+            
             # region Entity Framework
             
             services.AddDbContext<CattobotDbContext>(o =>
@@ -94,11 +114,14 @@ public class Program
             services.AddMapster();
 
             # endregion
-
-            services.AddKinopoiskIntegration(configuration);
+            
             services.AddYtDlp(configuration);
+            services.AddWikidataIntegration(configuration);
+            
             services.AddScoped<IFilmRepository, DbFilmRepository>();
             services.AddScoped<IFilmService, FilmService>();
+            
+            services.AddHostedService<WikidataBackgroundService>();
         });
 
         return builder;

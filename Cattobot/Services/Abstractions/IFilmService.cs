@@ -4,7 +4,7 @@ namespace Cattobot.Services.Abstractions;
 
 public interface IFilmService
 {
-    Task<FilmDb> AddFromKinopoisk(int kinopoiskId, ulong userId, ulong guildId, bool overwrite = false);
+    Task<FilmDb> AddFromTmdb(int tmdbId, ulong userId, ulong guildId, bool overwrite = false);
 
     Task<FilmDb> PickRandom(ulong guildId);
 

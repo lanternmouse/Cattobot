@@ -3,6 +3,7 @@ using System;
 using Cattobot.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cattobot.Db.Migrations
 {
     [DbContext(typeof(CattobotDbContext))]
-    partial class CattobotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260108111730_FixImdbIdType")]
+    partial class FixImdbIdType
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -41,10 +44,6 @@ namespace Cattobot.Db.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.PrimitiveCollection<string[]>("Directors")
-                        .IsRequired()
-                        .HasColumnType("text[]");
-
                     b.Property<int?>("Duration")
                         .HasColumnType("integer");
 
@@ -53,6 +52,7 @@ namespace Cattobot.Db.Migrations
                         .HasColumnType("text[]");
 
                     b.Property<string>("ImageUrl")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("ImdbId")
@@ -64,7 +64,12 @@ namespace Cattobot.Db.Migrations
                     b.Property<int?>("KinopoiskId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("LocalizedTitle")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("PreviewImageUrl")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<float>("Rating")
@@ -73,10 +78,6 @@ namespace Cattobot.Db.Migrations
                     b.Property<DateOnly?>("ReleaseDate")
                         .HasColumnType("date");
 
-                    b.Property<string>("SearchIndex")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
@@ -84,16 +85,7 @@ namespace Cattobot.Db.Migrations
                     b.Property<int?>("TmdbId")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("TmdbLastSynced")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("WikidataId")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("WikidataLastSynced")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("Year")
+                    b.Property<int>("Year")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -102,10 +94,10 @@ namespace Cattobot.Db.Migrations
                         .IsUnique()
                         .HasFilter("\"KinopoiskId\" IS NOT NULL");
 
-                    b.HasIndex("SearchIndex");
+                    b.HasIndex("LocalizedTitle");
 
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("SearchIndex"), "gin");
-                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("SearchIndex"), new[] { "gin_trgm_ops" });
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("LocalizedTitle"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("LocalizedTitle"), new[] { "gin_trgm_ops" });
 
                     b.ToTable("Films");
                 });

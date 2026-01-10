@@ -3,6 +3,7 @@ using System;
 using Cattobot.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Cattobot.Db.Migrations
 {
     [DbContext(typeof(CattobotDbContext))]
-    partial class CattobotDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260108132651_UpdateFilmModel")]
+    partial class UpdateFilmModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -84,14 +87,8 @@ namespace Cattobot.Db.Migrations
                     b.Property<int?>("TmdbId")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime?>("TmdbLastSynced")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("WikidataId")
                         .HasColumnType("text");
-
-                    b.Property<DateTime?>("WikidataLastSynced")
-                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("Year")
                         .HasColumnType("integer");

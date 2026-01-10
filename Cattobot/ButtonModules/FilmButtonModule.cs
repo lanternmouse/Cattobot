@@ -1,7 +1,6 @@
 using Cattobot.Helpers;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
-using NetCord;
 using NetCord.Rest;
 using NetCord.Services.ComponentInteractions;
 
@@ -10,9 +9,9 @@ namespace Cattobot.ButtonModules;
 public class FilmButtonModule(IFilmService filmService) : ComponentInteractionModule<ButtonInteractionContext>
 {
     [ComponentInteraction("filmAdd")]
-    public async Task Add(int kinopoiskId)
+    public async Task Add(int id)
     {
-        var filmDb = await filmService.AddFromKinopoisk(kinopoiskId, Context.User.Id, Context.Guild!.Id, true);
+        var filmDb = await filmService.AddFromTmdb(id, Context.User.Id, Context.Guild!.Id, true);
 
         await Context.Message.DeleteAsync();
 

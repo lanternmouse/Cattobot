@@ -2,26 +2,27 @@ using Cattobot.Db.Models;
 using Cattobot.Db.Models.Enums;
 using Cattobot.Exceptions;
 using Cattobot.Services.Abstractions;
-using Kinopoisk.Gateway;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using TMDbLib.Client;
+using TMDbLib.Objects.Movies;
 
 namespace Cattobot.Services;
 
 public class FilmService(
-    IFilmsClient kinopoiskFilmsClient,
+    TMDbClient tmdbClient,
     IFilmRepository filmRepo,
     IMapper mapper,
     IMemoryCache cache
     ) : IFilmService
 {
-    public async Task<FilmDb> AddFromKinopoisk(int kinopoiskId, ulong userId, ulong guildId, bool overwrite = false)
+    public async Task<FilmDb> AddFromTmdb(int tmdbId, ulong userId, ulong guildId, bool overwrite = false)
     {
         if (!overwrite)
         {
             var existingFilm = await filmRepo.GetGuildListQuery(guildId, userId, [])
-                .Where(x => x.Film.KinopoiskId == kinopoiskId)
+                .Where(x => x.Film.TmdbId == tmdbId)
                 .FirstOrDefaultAsync();
 
             if (existingFilm != null)
@@ -35,17 +36,10 @@ public class FilmService(
             }
         }
 
-        var cacheKey = $"kinopoisk-{kinopoiskId}";
-        FilmDb filmDb;
-        if (cache.TryGetValue(cacheKey, out FilmSearchResponse_films? cachedFilm) && cachedFilm != null)
-        {
-            filmDb = mapper.Map<FilmDb>(cachedFilm);
-        }
-        else
-        {
-            var film = await kinopoiskFilmsClient.FilmsAsync(kinopoiskId);
-            filmDb = mapper.Map<FilmDb>(film!);
-        }
+        var film = await tmdbClient.GetMovieAsync(tmdbId, MovieMethods.Credits | MovieMethods.ExternalIds);
+        var filmDb = mapper.Map<FilmDb>(film!);
+        
+        filmDb.TmdbLastSynced = DateTime.UtcNow;
 
         await filmRepo.Add(filmDb, userId, guildId, FilmStatus.Planned);
         
@@ -80,7 +74,7 @@ public class FilmService(
 
         var pickedFilm = await filmsQuery
             .OrderBy(x => x.Id)
-            .Skip(random.Next(0, filmCount - 1))
+            .Skip(random.Next(0, filmCount))
             .FirstAsync();
 
         return pickedFilm.Film;

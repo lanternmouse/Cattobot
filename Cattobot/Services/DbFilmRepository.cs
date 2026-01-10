@@ -17,7 +17,7 @@ public class DbFilmRepository(
             .Include(x => x.Guilds.Where(s => s.GuildId == guildId))
             .ThenInclude(x => x.Members)
             .AsSplitQuery()
-            .FirstOrDefaultAsync(x => x.KinopoiskId == film.KinopoiskId, ct);
+            .FirstOrDefaultAsync(x => x.TmdbId == film.TmdbId, ct);
         
         if (filmDb == null)
         {
@@ -64,9 +64,14 @@ public class DbFilmRepository(
 
         if (statuses.Length != 0)
             filmsQuery = filmsQuery.Where(x => statuses.Contains(x.FilmStatus));
-        
-        if(!string.IsNullOrEmpty(search))
-            filmsQuery = filmsQuery.Where(x => EF.Functions.ILike(x.Film.LocalizedTitle, $"%{search}%"));
+
+        if (!string.IsNullOrEmpty(search))
+        {
+            var words = search.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            filmsQuery = filmsQuery.Where(x => EF.Functions.TrigramsAreSimilar(search, x.Film.SearchIndex)
+                                               || words.Any(w =>
+                                                   EF.Functions.TrigramsAreWordSimilar(w, x.Film.SearchIndex)));
+        }
 
         return filmsQuery;
     }

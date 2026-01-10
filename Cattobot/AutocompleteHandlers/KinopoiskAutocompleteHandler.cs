@@ -1,13 +1,15 @@
-using Kinopoisk.Gateway;
 using Microsoft.Extensions.Caching.Memory;
 using NetCord;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
+using TMDbLib.Client;
+using TMDbLib.Objects.General;
+using TMDbLib.Objects.Search;
 
 namespace Cattobot.AutocompleteHandlers;
 
 public class KinopoiskAutocompleteProvider(
-    IFilmsClient kinopoiskFilmsClient,
+    TMDbClient tmdbClient,
     IMemoryCache cache
 ) : IAutocompleteProvider<AutocompleteInteractionContext>
 {
@@ -21,18 +23,20 @@ public class KinopoiskAutocompleteProvider(
         var cacheKey = $"kinopoisk-search-{value}";
         var cacheOptions = new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromDays(3));
 
-        FilmSearchResponse filmSuggestions;
-        if (cache.TryGetValue(cacheKey, out FilmSearchResponse? result))
+        SearchContainer<SearchMovie?> filmSuggestions;
+        if (cache.TryGetValue(cacheKey, out SearchContainer<SearchMovie?>? result))
         {
             filmSuggestions = result!;
         }
         else
         {
-            filmSuggestions = await kinopoiskFilmsClient.SearchByKeywordAsync(value, 1);
-            cache.Set(cacheKey, filmSuggestions.Films, cacheOptions);
-            foreach (var filmSuggestion in filmSuggestions.Films)
+            filmSuggestions = await tmdbClient.SearchMovieAsync(value, 1);
+            cache.Set(cacheKey, filmSuggestions, cacheOptions);
+            foreach (var filmSuggestion in filmSuggestions.Results)
             {
-                var filmCacheKey = $"kinopoisk-{filmSuggestion.FilmId}";
+                if (filmSuggestion == null) continue;
+                
+                var filmCacheKey = $"tmdb-{filmSuggestion.Id}";
                 if (!cache.TryGetValue(filmCacheKey, out _))
                 {
                     cache.Set(filmCacheKey, filmSuggestion, cacheOptions);
@@ -40,10 +44,17 @@ public class KinopoiskAutocompleteProvider(
             }
         }
 
-        var results = filmSuggestions.Films.Select(s => new ApplicationCommandOptionChoiceProperties(
-            $"{s.NameRu} ({s.Year}), {s.NameEn}",
-            s.FilmId.ToString()
-        ));
+        var results = filmSuggestions.Results
+            .Where(s => s != null)
+            .Select(s =>
+            {
+                var title = s!.Title;
+                if (s.ReleaseDate.HasValue) title += $" ({s.ReleaseDate.Value.Year})";
+                return new ApplicationCommandOptionChoiceProperties(
+                    title,
+                    s.Id.ToString()
+                );
+            });
 
         return results.Take(25);
     }

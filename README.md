@@ -9,5 +9,5 @@ It includes several modules:
   - Film lists. Each member has their own personal list of films
   - Film roll. Randomly select one film from the combined members' lists
   - Film statuses. Mark any film as planned, watched or abandoned to include or exclude them from the roll pool
-  - Using the Kinopoisk Unofficial API
+  - Using the TMDB API and Wikidata API
   - Planned: Series support

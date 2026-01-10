@@ -19,11 +19,11 @@ public class NonPlannedFilmsAutocompleteHandler(
         var filmSuggestions = await filmRepo
             .GetGuildListQuery(context.Guild!.Id, null, [FilmStatus.Completed, FilmStatus.Abandoned], value)
             .Take(25)
-            .Select(x => new {x.Film.LocalizedTitle, x.Film.Year, x.Film.Id})
+            .Select(x => new {x.Film.Title, x.Film.Year, x.Film.Id})
             .ToListAsync();
 
         var results = filmSuggestions.Select(s => new ApplicationCommandOptionChoiceProperties(
-            $"{s.LocalizedTitle} ({s.Year})",
+            $"{s.Title} ({s.Year})",
             s.Id.ToString()
         ));
 

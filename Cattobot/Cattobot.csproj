@@ -15,6 +15,9 @@
         <None Update="appsettings.*.json">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
+        <None Update="appsettings.Prod.json">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
     
     <ItemGroup>
@@ -33,6 +36,8 @@
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.1" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.1" />
       <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.1" />
+      <PackageReference Include="Nager.Country" Version="4.3.4" />
+      <PackageReference Include="Nager.Country.Translation" Version="4.3.3" />
       <PackageReference Include="NetCord" Version="1.0.0-alpha.452" />
       <PackageReference Include="NetCord.Hosting" Version="1.0.0-alpha.452" />
       <PackageReference Include="NetCord.Hosting.Services" Version="1.0.0-alpha.452" />
@@ -42,11 +47,12 @@
       <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
       <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
       <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+      <PackageReference Include="TMDbLib" Version="2.3.0" />
     </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\Cattobot.Db\Cattobot.Db.csproj" />
-      <ProjectReference Include="..\Kinopoisk.Gateway\Kinopoisk.Gateway.csproj" />
+      <ProjectReference Include="..\Wikidata.Gateway\Wikidata.Gateway.csproj" />
       <ProjectReference Include="..\YtDlp.Gateway\YtDlp.Gateway.csproj" />
     </ItemGroup>
 

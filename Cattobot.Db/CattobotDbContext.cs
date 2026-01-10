@@ -20,7 +20,7 @@ public class CattobotDbContext(DbContextOptions<CattobotDbContext> options) : Db
             b.HasKey(x => x.Id);
             b.Property(x => x.Id).ValueGeneratedOnAdd();
 
-            b.HasIndex(x => x.LocalizedTitle)
+            b.HasIndex(x => x.SearchIndex)
                 .HasMethod("gin")
                 .HasOperators("gin_trgm_ops");
 
