@@ -42,6 +42,8 @@ public class TmdbProfile : IRegister
 
     private static string? GetLocalizedCountry(string isoCode)
     {
+        if (isoCode.Equals("su", StringComparison.OrdinalIgnoreCase)) return "СССР";
+        
         return new TranslationProvider().GetCountryTranslatedName(isoCode, new CultureInfo("ru-RU"));
     }
 }

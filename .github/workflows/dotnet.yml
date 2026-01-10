@@ -61,7 +61,7 @@ jobs:
             --name cattobot-container \
             --network mynet \
             --restart unless-stopped \
-            -e Discord__Token="${TOKEN}" \
+            -e Discord__Token="${DISCORD_TOKEN}" \
             -e Tmdb__Token="${TMDB_TOKEN}" \
             -e Wikidata__Token="${WIKIDATA_TOKEN}" \
             -e ConnectionStrings__Default="${CONNECTION_STRING}" \

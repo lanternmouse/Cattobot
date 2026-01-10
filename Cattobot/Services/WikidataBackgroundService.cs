@@ -21,7 +21,7 @@ public class WikidataBackgroundService(
         while (!stoppingToken.IsCancellationRequested)
         {
             var unsyncedWikidata = await dbContext.Films
-                .Where(x => x.WikidataLastSynced == null)
+                .Where(x => x.WikidataLastSynced == null && x.WikidataId != null)
                 .Select(x => new { x.Id, x.WikidataId })
                 .ToListAsync(stoppingToken);
 
