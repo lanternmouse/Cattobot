@@ -36,15 +36,16 @@ public class MusicCommandModule(
         {
             await voiceChatService.TryConnect(Context.Guild!.Id, voiceState.ChannelId!.Value);
             
-            var trackDb = await trackQueueService.EnqueueFromQuery(guild.Id, Context.User.Id, query);
+            var trackItem = await trackQueueService.EnqueueFromQuery(guild.Id, Context.User.Id, query);
 
             var player = musicPlayerManager.GetOrCreate(guild.Id);
             player.SetTextChannel(Context.Channel);
-            player.StartQueueIfStopped(voiceState!.ChannelId!.Value);
+            player.StartQueueIfStopped();
 
             await FollowupAsync(new InteractionMessageProperties()
-                .WithContent($":cd: В очередь добавлен трек **{trackDb.Title}**")
-                .WithEmbeds([EmbedPropertiesProvider.GetTrackEmbed(trackDb)]));
+                .WithContent($":cd: В очередь добавлен трек **{trackItem.Track.Title}**")
+                .WithEmbeds([EmbedPropertiesProvider.GetTrackItemEmbed(trackItem)])
+                .WithComponents([ComponentsPropertiesProvider.AddedTrackItemComponents(trackItem)]));
         } catch (Exception e)
         {
             await FollowupAsync(new InteractionMessageProperties().WithContent(e.Message));
@@ -56,14 +57,14 @@ public class MusicCommandModule(
     {
         var player = musicPlayerManager.GetOrCreate(Context.Guild!.Id);
 
-        if (player.State.Status == VoiceStateStatus.Stopped)
+        if (player.State.Status == MusicPlayerStatus.Stopped)
         {
             await RespondAsync(InteractionCallback.Message("Плеер не активен"));
         }
 
         await RespondAsync(InteractionCallback.DeferredMessage());
         
-        player.SetInteractionToFollowup(Context.Interaction);
+        player.SetCommandInteractionToFollowup(Context.Interaction);
         await player.SkipForward();
     }
     
@@ -72,14 +73,14 @@ public class MusicCommandModule(
     {
         var player = musicPlayerManager.GetOrCreate(Context.Guild!.Id);
         
-        if (player.State.Status == VoiceStateStatus.Stopped)
+        if (player.State.Status == MusicPlayerStatus.Stopped)
         {
             await RespondAsync(InteractionCallback.Message("Плеер не активен"));
         }
         
         await RespondAsync(InteractionCallback.DeferredMessage());
         
-        player.SetInteractionToFollowup(Context.Interaction);
+        player.SetCommandInteractionToFollowup(Context.Interaction);
         await player.SkipBackward();
     }
     
@@ -90,7 +91,7 @@ public class MusicCommandModule(
         
         await RespondAsync(InteractionCallback.DeferredMessage());
         
-        player.SetInteractionToFollowup(Context.Interaction);
+        player.SetCommandInteractionToFollowup(Context.Interaction);
         await player.Pause();
     }
     
@@ -101,7 +102,7 @@ public class MusicCommandModule(
         
         await RespondAsync(InteractionCallback.DeferredMessage());
         
-        player.SetInteractionToFollowup(Context.Interaction);
+        player.SetCommandInteractionToFollowup(Context.Interaction);
         await player.Resume();
     }
 

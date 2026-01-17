@@ -54,6 +54,13 @@ public class TrackQueueRepository(
 
         return id;
     }
+
+    public async Task<TrackQueueItemDb?> GetItem(Guid itemId, CancellationToken ct = default)
+    {
+        return await dbContext.TrackQueueItemDb.AsNoTracking()
+            .Include(x => x.Track)
+            .FirstOrDefaultAsync(x => x.Id == itemId, ct);
+    }
     
     public async Task<TrackQueueItemDb?> GetLastItem(Guid queueId, CancellationToken ct = default)
     {

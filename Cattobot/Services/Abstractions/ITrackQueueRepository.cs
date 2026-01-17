@@ -8,6 +8,8 @@ public interface ITrackQueueRepository
 
     Task<Guid> Append(Guid queueId, Guid trackId, ulong userId, CancellationToken ct = default);
 
+    Task<TrackQueueItemDb?> GetItem(Guid itemId, CancellationToken ct = default);
+    
     Task<TrackQueueItemDb?> GetLastItem(Guid queueId, CancellationToken ct = default);
 
     Task<TrackQueueItemDb?> GetFirstItem(Guid queueId, CancellationToken ct = default);

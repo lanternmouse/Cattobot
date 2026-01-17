@@ -108,37 +108,7 @@ public static class EmbedPropertiesProvider
     
     # region Music
     
-    public static EmbedProperties GetTrackEmbed(TrackDb trackDb)
-    {
-        var fields = new List<EmbedFieldProperties>();
-        
-        var props = new EmbedProperties()
-        {
-            Title = trackDb.Title,
-            Url = trackDb.ExternalUrl,
-            Fields = fields
-        };
-
-        if (!string.IsNullOrEmpty(trackDb.ThumbnailUrl))
-            props.Thumbnail = new EmbedThumbnailProperties(trackDb.ThumbnailUrl);
-
-        props.Author = new EmbedAuthorProperties
-        {
-            Url = trackDb.ArtistUrl,
-            Name = trackDb.Artist,
-        };
-        
-        fields.Add(new EmbedFieldProperties
-        {
-            Name = "Длительность",
-            Inline = true,
-            Value = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(trackDb.Duration)).ToNiceDuration()
-        });
-
-        return props;
-    }
-
-    public static EmbedProperties GetQueueItemEmbed(TrackQueueItemDb item)
+    public static EmbedProperties GetTrackItemEmbed(TrackQueueItemDb item)
     {
         var trackDb = item.Track;
         

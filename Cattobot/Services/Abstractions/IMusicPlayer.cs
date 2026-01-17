@@ -6,10 +6,14 @@ public interface IMusicPlayer
 {
     void SetTextChannel(TextChannel textChannel);
     
-    void SetInteractionToFollowup(ApplicationCommandInteraction interaction);
-    
-    void StartQueueIfStopped(ulong channelId, CancellationToken ct = default);
+    void SetCommandInteractionToFollowup(ApplicationCommandInteraction interaction);
 
+    void SetButtonInteractionToFollowup(ButtonInteraction interaction);
+    
+    void StartQueueIfStopped(CancellationToken ct = default);
+
+    Task SkipTo(Guid? itemId, CancellationToken ct = default);
+    
     Task SkipForward(CancellationToken ct = default);
 
     Task SkipBackward(CancellationToken ct = default);

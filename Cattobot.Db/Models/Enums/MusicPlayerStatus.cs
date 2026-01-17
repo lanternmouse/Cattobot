@@ -1,6 +1,6 @@
 namespace Cattobot.Db.Models.Enums;
 
-public enum VoiceStateStatus
+public enum MusicPlayerStatus
 {
     Playing = 1,
     Paused = 2,

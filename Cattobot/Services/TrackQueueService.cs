@@ -13,7 +13,7 @@ public class TrackQueueService(
     IMapper mapper
     ) : ITrackQueueService
 {
-    public async Task<TrackDb> EnqueueFromQuery(ulong guildId, ulong userId, string query, CancellationToken ct = default)
+    public async Task<TrackQueueItemDb> EnqueueFromQuery(ulong guildId, ulong userId, string query, CancellationToken ct = default)
     {
         var queue = await queueRepo.GetOrCreate(guildId, ct);
 
@@ -32,8 +32,10 @@ public class TrackQueueService(
         
         var trackId = await trackRepo.Add(trackDb, ct);
 
-        await queueRepo.Append(queue.Id, trackId, userId, ct);
+        var itemId = await queueRepo.Append(queue.Id, trackId, userId, ct);
+        
+        var trackItem = await queueRepo.GetItem(itemId, ct);
 
-        return trackDb;
+        return trackItem!;
     }
 }

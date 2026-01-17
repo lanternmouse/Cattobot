@@ -20,7 +20,7 @@ public class MusicPlayerManager(
         player!.State = new MusicPlayerContext
         {
             GuildId = guildId,
-            Status = VoiceStateStatus.Stopped
+            Status = MusicPlayerStatus.Stopped
         };
 
         MusicPlayers[guildId] = player;

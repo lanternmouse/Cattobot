@@ -21,9 +21,9 @@ public class MusicPlayer(
 {
     public MusicPlayerContext State { get; set; } = new();
 
-    public void StartQueueIfStopped(ulong channelId, CancellationToken ct = default)
+    public void StartQueueIfStopped(CancellationToken ct = default)
     {
-        if (State.Status != VoiceStateStatus.Stopped) return;
+        if (State.Status != MusicPlayerStatus.Stopped) return;
         _ = Task.Run(async () => await StartQueue(ct), ct);
     }
 
@@ -32,9 +32,14 @@ public class MusicPlayer(
         State.TextChannel = textChannel;
     }
     
-    public void SetInteractionToFollowup(ApplicationCommandInteraction interaction)
+    public void SetCommandInteractionToFollowup(ApplicationCommandInteraction interaction)
     {
-        State.InteractionToReply = interaction;
+        State.CommandInteractionToReply = interaction;
+    }
+    
+    public void SetButtonInteractionToFollowup(ButtonInteraction interaction)
+    {
+        State.ButtonInteractionToReply = interaction;
     }
 
     private async Task StartQueue(CancellationToken ct = default)
@@ -43,14 +48,16 @@ public class MusicPlayer(
         
         if (voiceClient == null) return;
         
-        State.Status = VoiceStateStatus.Playing;
+        State.Status = MusicPlayerStatus.Playing;
 
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         
         try
         {
-            while (State.Status != VoiceStateStatus.Stopped && voiceClient != null)
+            while (State.Status != MusicPlayerStatus.Stopped && voiceClient != null)
             {
+                State.Status = MusicPlayerStatus.Playing;
+                
                 var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
                 
                 if (currentItem == null)
@@ -89,22 +96,28 @@ public class MusicPlayer(
         finally
         {
             await queueRepo.SetCurrentItem(queue.Id, null, ct);
-            if (State.PlayingNowMessage != null) await State.PlayingNowMessage.DeleteAsync(cancellationToken: ct);
+            if (State.PlayingNowMessage != null) await DeletePlayingNowMessage();
             State.PlayingNowMessage = null;
-            State.Status = VoiceStateStatus.Stopped;
+            State.Status = MusicPlayerStatus.Stopped;
         }
+    }
+
+    public async Task SkipTo(Guid? itemId, CancellationToken ct = default)
+    {
+        var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
+        await queueRepo.SetCurrentItem(queue.Id, itemId, ct);
+        
+        State.IsSkipped = true;
+        State.EncodingProcess?.Kill();
     }
 
     public async Task SkipForward(CancellationToken ct = default)
     {
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
-        
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
-        await queueRepo.SetCurrentItem(queue.Id, currentItem?.NextItemId, ct);
-        
-        State.IsSkipped = true;
-        State.EncodingProcess?.Kill();
+
+        await SkipTo(currentItem?.NextItemId, ct);
     }
     
     public async Task SkipBackward(CancellationToken ct = default)
@@ -113,10 +126,8 @@ public class MusicPlayer(
         if (queue.CurrentTrackId == null) return;
         
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
-        await queueRepo.SetCurrentItem(queue.Id, currentItem?.PrevItemId, ct);
-        
-        State.IsSkipped = true;
-        State.EncodingProcess?.Kill();
+
+        await SkipTo(currentItem?.PrevItemId, ct);
     }
     
     public async Task Resume(CancellationToken ct = default)
@@ -128,7 +139,7 @@ public class MusicPlayer(
         if (currentItem == null) return;
         
         State.EncodingProcess?.SendSignalContinue();
-        if (State.Status == VoiceStateStatus.Paused) State.Status = VoiceStateStatus.Playing;
+        if (State.Status == MusicPlayerStatus.Paused) State.Status = MusicPlayerStatus.Playing;
         
         await SendPlayingNowMessage(currentItem);
     }
@@ -142,14 +153,14 @@ public class MusicPlayer(
         if (currentItem == null) return;
         
         State.EncodingProcess?.SendSignalStop();
-        if (State.Status == VoiceStateStatus.Playing) State.Status = VoiceStateStatus.Paused;
+        if (State.Status == MusicPlayerStatus.Playing) State.Status = MusicPlayerStatus.Paused;
         
         await SendPlayingNowMessage(currentItem);
     }
 
     public void Stop()
     {
-        State.Status = VoiceStateStatus.Stopped;
+        State.Status = MusicPlayerStatus.Stopped;
         
         State.EncodingProcess?.Kill();
         State.EncodingProcess?.Dispose();
@@ -161,33 +172,33 @@ public class MusicPlayer(
         var voiceClient = voiceChatService.GetVoiceClient(State.GuildId);
 
         if (voiceClient == null) return;
-        
-        var sourceUrl = await youtubeService.GetAudioStreamUrl(trackItem.Track.ExternalUrl);
-        
+
         await using var voiceStream = voiceClient.CreateOutputStream(normalizeSpeed: true);
         
         await using var stream =
             new OpusEncodeStream(voiceStream, PcmFormat.Short, VoiceChannels.Stereo, OpusApplication.Audio);
-        
-        logger.LogDebug("Started encoding process");
 
-        State.EncodingProcess = FFmpegProvider.StartEncodeProcess(sourceUrl);
-        
         try
         {
+            var sourceUrl = await youtubeService.GetAudioStreamUrl(trackItem.Track.ExternalUrl);
+
+            logger.LogDebug("Started encoding process");
+
+            State.EncodingProcess = FFmpegProvider.StartEncodeProcess(sourceUrl);
+
             await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(stream, ct);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error in encode process");
+            await SendErrorMessage(trackItem, ex.Message);
         }
         finally
         {
             await stream.FlushAsync(ct);
-            await State.EncodingProcess.WaitForExitAsync(ct);
+            if (State.EncodingProcess != null) await State.EncodingProcess.WaitForExitAsync(ct);
             State.EncodingProcess?.Kill();
         }
-        
+
         logger.LogDebug("Ended encoding process");
     }
 
@@ -195,30 +206,31 @@ public class MusicPlayer(
     {
         try
         {
-            if (State.PlayingNowMessage != null)
-            {
-                await State.PlayingNowMessage.DeleteAsync();
-                State.PlayingNowMessage = null;
-            }
+            var content = State.Status == MusicPlayerStatus.Paused
+                ? $":notes: **НА ПАУЗЕ** ~~Сейчас играет {trackItem.Track.Title}~~"
+                : $":notes: Сейчас играет **{trackItem.Track.Title}**";
 
-            if (State.TextChannel != null)
-            {
-                var content = State.Status == VoiceStateStatus.Paused
-                    ? $":notes: **НА ПАУЗЕ** ~~Сейчас играет {trackItem.Track.Title}~~"
-                    : $":notes: Сейчас играет **{trackItem.Track.Title}**";
-
-                State.PlayingNowMessage = await SendMessage(new MessageProperties()
-                        .WithContent(content)
-                        .WithEmbeds([EmbedPropertiesProvider.GetQueueItemEmbed(trackItem)]),
-                    CancellationToken.None);
-            }
+            State.PlayingNowMessage = await SendMessage(new MessageProperties()
+                    .WithContent(content)
+                    .WithEmbeds([EmbedPropertiesProvider.GetTrackItemEmbed(trackItem)])
+                    .WithComponents([ComponentsPropertiesProvider.MusicPlayerComponents(State.Status)]),
+                CancellationToken.None);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error in SendPlayingNowMessage");
         }
     }
-    
+
+    private async Task DeletePlayingNowMessage()
+    {
+        if (State.PlayingNowMessage != null)
+        {
+            await State.PlayingNowMessage.DeleteAsync();
+            State.PlayingNowMessage = null;
+        }
+    }
+
     private async Task SendErrorMessage(TrackQueueItemDb trackItem, string errorMessage)
     {
         if (State.TextChannel != null)
@@ -234,18 +246,31 @@ public class MusicPlayer(
     private async Task<RestMessage?> SendMessage(MessageProperties messageProperties, CancellationToken ct)
     {
         RestMessage? message = null;
-        if (State.InteractionToReply != null)
+        if (State.CommandInteractionToReply != null)
         {
-            message = await State.InteractionToReply.SendFollowupMessageAsync(new InteractionMessageProperties()
+            await DeletePlayingNowMessage();
+            message = await State.CommandInteractionToReply.SendFollowupMessageAsync(new InteractionMessageProperties()
                 .WithContent(messageProperties.Content)
                 .WithEmbeds(messageProperties.Embeds)
                 .AddComponents(messageProperties.Components ?? []), cancellationToken: ct);
-            State.InteractionToReply = null;
+            State.CommandInteractionToReply = null;
+        }
+        else if (State.ButtonInteractionToReply != null)
+        {
+            message = await State.PlayingNowMessage!.ModifyAsync(a =>
+                a.WithContent(messageProperties.Content)
+                    .WithEmbeds(messageProperties.Embeds)
+                    .AddComponents(messageProperties.Components ?? []), cancellationToken: ct);
+            await State.ButtonInteractionToReply.SendResponseAsync(InteractionCallback.DeferredModifyMessage,
+                cancellationToken: ct);
+            State.ButtonInteractionToReply = null;
         }
         else if (State.TextChannel != null)
         {
+            await DeletePlayingNowMessage();
             message = await State.TextChannel.SendMessageAsync(messageProperties, cancellationToken: ct);
         }
+
         return message;
     }
 }
