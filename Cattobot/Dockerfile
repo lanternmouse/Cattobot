@@ -1,5 +1,4 @@
 ﻿FROM mcr.microsoft.com/dotnet/runtime:10.0 AS base
-USER $APP_UID
 WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
@@ -19,5 +18,6 @@ WORKDIR /app
 RUN apt update
 RUN apt install -y --no-install-recommends libopus0 libopus-dev ffmpeg
 RUN rm -rf /var/lib/apt/lists/*
+USER $APP_UID
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Cattobot.dll"]
