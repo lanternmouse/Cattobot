@@ -16,5 +16,8 @@ RUN dotnet publish "./Cattobot.csproj" -c $BUILD_CONFIGURATION -o /app/publish /
 
 FROM base AS final
 WORKDIR /app
+RUN apt update
+RUN apt install -y --no-install-recommends libopus0 libopus-dev ffmpeg
+RUN rm -rf /var/lib/apt/lists/*
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Cattobot.dll"]
