@@ -1,6 +1,7 @@
 using Cattobot.Db.Models.Enums;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
+using NetCord;
 using NetCord.Rest;
 using NetCord.Services.ComponentInteractions;
 
@@ -15,6 +16,8 @@ public class MusicButtonModule(
     [ComponentInteraction("musicAdd")]
     public async Task Add(string incomingTrackId)
     {
+        if (!await IsInSameChannel(Context)) return;
+        
         var trackId = Guid.Parse(incomingTrackId);
 
         var queue = await trackQueueRepository.GetOrCreate(Context.Guild!.Id);
@@ -34,6 +37,8 @@ public class MusicButtonModule(
     [ComponentInteraction("musicSkipTo")]
     public async Task MusicSkipTo(string incomingItemId, string incomingTrackId)
     {
+        if (!await IsInSameChannel(Context)) return;
+        
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
 
         var itemId = Guid.Parse(incomingItemId);
@@ -46,30 +51,30 @@ public class MusicButtonModule(
             var queue = await trackQueueRepository.GetOrCreate(Context.Guild!.Id);
             itemId = await trackQueueRepository.Append(queue.Id, trackId, Context.User.Id);
         }
-        
-        await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredModifyMessage);
 
         if (player.State.Status != MusicPlayerStatus.Stopped)
         {
+            await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredModifyMessage);
             await player.SkipTo(itemId);
         }
         else
         {
-            if (!Context.Guild.VoiceStates.TryGetValue(Context.User.Id, out var voiceState))
+            await Context.Interaction.SendResponseAsync(InteractionCallback.DeferredModifyMessage);
+
+            if (Context.Guild!.VoiceStates.TryGetValue(Context.User.Id, out var voiceState))
             {
-                await RespondAsync(InteractionCallback.Message("You are not connected to any voice channel!"));
-                return;
+                await voiceChatService.TryConnect(Context.Guild.Id, voiceState.ChannelId!.Value);
+                player.SetTextChannel(Context.Channel);
+                player.StartQueueIfStopped();
             }
-            
-            await voiceChatService.TryConnect(Context.Guild.Id, voiceState.ChannelId!.Value);
-            player.SetTextChannel(Context.Channel);
-            player.StartQueueIfStopped();
         }
     }
 
     [ComponentInteraction("musicSkipForward")]
     public async Task MusicSkipForward()
     {
+        if (!await IsInSameChannel(Context)) return;
+        
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
         player.SetButtonInteractionToFollowup(Context.Interaction);
         await player.SkipForward();
@@ -78,6 +83,8 @@ public class MusicButtonModule(
     [ComponentInteraction("musicSkipBackward")]
     public async Task MusicSkipBackward()
     {
+        if (!await IsInSameChannel(Context)) return;
+        
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
         player.SetButtonInteractionToFollowup(Context.Interaction);
         await player.SkipBackward();
@@ -86,6 +93,8 @@ public class MusicButtonModule(
     [ComponentInteraction("musicResume")]
     public async Task MusicResume()
     {
+        if (!await IsInSameChannel(Context)) return;
+        
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
         player.SetButtonInteractionToFollowup(Context.Interaction);
         await player.Resume();
@@ -94,8 +103,34 @@ public class MusicButtonModule(
     [ComponentInteraction("musicPause")]
     public async Task MusicPause()
     {
+        if (!await IsInSameChannel(Context)) return;
+        
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
         player.SetButtonInteractionToFollowup(Context.Interaction);
         await player.Pause();
+    }
+    
+    private async Task<bool> IsInSameChannel(ButtonInteractionContext interactionContext)
+    {
+        if (!Context.Guild!.VoiceStates.TryGetValue(Context.User.Id, out var voiceState))
+        {
+            await interactionContext.Interaction.SendResponseAsync(
+                InteractionCallback.Message(new InteractionMessageProperties()
+                    .WithContent("Вы не подключены к голосовому каналу")
+                    .WithFlags(MessageFlags.Ephemeral)));
+            return false;
+        }
+
+        var botVoiceChannelId = voiceChatService.GetVoiceChannelId(Context.Guild.Id);
+        if (botVoiceChannelId != null && botVoiceChannelId != voiceState.ChannelId)
+        {
+            await interactionContext.Interaction.SendResponseAsync(
+                InteractionCallback.Message(new InteractionMessageProperties()
+                    .WithContent("Вы не в одном голосовом канале с ботом")
+                    .WithFlags(MessageFlags.Ephemeral)));
+            return false;
+        }
+
+        return true;
     }
 }

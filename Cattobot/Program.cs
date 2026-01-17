@@ -124,7 +124,6 @@ public class Program
             
             services.AddScoped<IFilmService, FilmService>();
             services.AddScoped<ITrackQueueService, TrackQueueService>();
-            services.AddScoped<IMusicPlayer, MusicPlayer>();
 
             services.AddSingleton<IVoiceChatService, VoiceChatService>();
             services.AddSingleton<IMusicPlayerManager, MusicPlayerManager>();

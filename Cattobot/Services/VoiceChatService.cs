@@ -1,3 +1,4 @@
+using Cattobot.Models;
 using Cattobot.Services.Abstractions;
 using NetCord.Gateway;
 using NetCord.Gateway.Voice;
@@ -8,7 +9,7 @@ public class VoiceChatService : IVoiceChatService
 {
     private readonly GatewayClient _discordClient;
     private readonly IMusicPlayerManager _musicPlayerManager;
-    private readonly Dictionary<ulong, VoiceClient> _voiceClients = [];
+    private readonly Dictionary<ulong, VoiceChat> _voiceClients = [];
     
     public VoiceChatService(GatewayClient discordClient, IMusicPlayerManager musicPlayerManager)
     {
@@ -20,30 +21,45 @@ public class VoiceChatService : IVoiceChatService
 
     public VoiceClient? GetVoiceClient(ulong guildId)
     {
-        return _voiceClients.GetValueOrDefault(guildId);
+        return _voiceClients.GetValueOrDefault(guildId)?.VoiceClient;
     }
     
-    public async Task<VoiceClient> TryConnect(ulong guildId, ulong channelId)
+    public ulong? GetVoiceChannelId(ulong guildId)
+    {
+        return _voiceClients.GetValueOrDefault(guildId)?.ChannelId;
+    }
+    
+    public async Task<VoiceChat> TryConnect(ulong guildId, ulong channelId)
     {
         var cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token;
         
-        if (!_voiceClients.TryGetValue(guildId, out var voiceClient))
+        if (!_voiceClients.TryGetValue(guildId, out var voiceChat))
         {
-            voiceClient = await _discordClient.JoinVoiceChannelAsync(guildId, channelId,
+            voiceChat = new VoiceChat
+            {
+                ChannelId = channelId,
+                VoiceClient = null,
+            };
+            
+            _voiceClients[guildId] = voiceChat;
+
+            var voiceClient = await _discordClient.JoinVoiceChannelAsync(guildId, channelId,
                 cancellationToken: cancellationToken);
-            _voiceClients[guildId] = voiceClient;
 
             await voiceClient.StartAsync(cancellationToken);
             await voiceClient.EnterSpeakingStateAsync(new SpeakingProperties(SpeakingFlags.Microphone),
                 cancellationToken: cancellationToken);
             
-            return voiceClient;
+            voiceChat.VoiceClient = voiceClient;
+            
+            return voiceChat;
         }
 
         await _discordClient.UpdateVoiceStateAsync(new VoiceStateProperties(guildId, channelId),
             cancellationToken: cancellationToken);
+        voiceChat.ChannelId = channelId;
 
-        return voiceClient;
+        return voiceChat;
     }
     
     public async Task Disconnect(ulong guildId)
@@ -52,14 +68,31 @@ public class VoiceChatService : IVoiceChatService
         _voiceClients.Remove(guildId);
     }
 
-    private ValueTask HandleVoiceStateUpdate(VoiceState state)
+    private async ValueTask HandleVoiceStateUpdate(VoiceState state)
     {
+        if (state.UserId != _discordClient.Id) return;
+
         if (state.ChannelId == null)
         {
             _voiceClients.Remove(state.GuildId);
             _musicPlayerManager.Drop(state.GuildId);
         }
+        else
+        {
+            if (!_voiceClients.TryGetValue(state.GuildId, out var voiceClient))
+            {
+                await Disconnect(state.GuildId);
+                return;
+            }
 
-        return ValueTask.CompletedTask;
+            if (voiceClient.ChannelId != state.ChannelId)
+            {
+                _voiceClients.Remove(state.GuildId);
+
+                await TryConnect(state.GuildId, state.ChannelId.Value);
+                
+                voiceClient.VoiceClient?.Dispose();
+            }
+        }
     }
 }

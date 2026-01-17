@@ -3,6 +3,7 @@ using Cattobot.Db.Models.Enums;
 using Cattobot.Helpers;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
+using NetCord;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
 
@@ -24,7 +25,9 @@ public class MusicCommandModule(
         // Get the user voice state
         if (!guild.VoiceStates.TryGetValue(Context.User.Id, out var voiceState))
         {
-            await RespondAsync(InteractionCallback.Message("You are not connected to any voice channel!"));
+            await RespondAsync(InteractionCallback.Message(new InteractionMessageProperties()
+                .WithContent("Вы не подключены к голосовому каналу")
+                .WithFlags(MessageFlags.Ephemeral)));
             return;
         }
 
