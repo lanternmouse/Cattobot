@@ -2,9 +2,9 @@
 A bot I created for my own Discord server
 
 It includes several modules:
-- Music player (WIP)
+- Music player (kinda work-in-progress)
   - Queue support
-  - Using yt-dlp as the source of track and audio
+  - Using youtube inner api as the source of track infos and audio
 - Film organizer
   - Film lists. Each member has their own personal list of films
   - Film roll. Randomly select one film from the combined members' lists
