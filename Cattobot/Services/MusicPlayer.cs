@@ -70,9 +70,10 @@ public class MusicPlayer(
                 
                 if (currentItem == null) break;
 
+                await SendPlayingNowMessage(currentItem);
+                
                 try
                 {
-                    await SendPlayingNowMessage(currentItem);
                     await PlayTrack(currentItem, ct);
                 }
                 catch (Exception ex)
@@ -89,6 +90,7 @@ public class MusicPlayer(
         {
             await queueRepo.SetCurrentItem(queue.Id, null, ct);
             if (State.PlayingNowMessage != null) await State.PlayingNowMessage.DeleteAsync(cancellationToken: ct);
+            State.PlayingNowMessage = null;
             State.Status = VoiceStateStatus.Stopped;
         }
     }
@@ -191,21 +193,29 @@ public class MusicPlayer(
 
     private async Task SendPlayingNowMessage(TrackQueueItemDb trackItem)
     {
-        if (State.PlayingNowMessage != null)
+        try
         {
-            await State.PlayingNowMessage.DeleteAsync();
+            if (State.PlayingNowMessage != null)
+            {
+                await State.PlayingNowMessage.DeleteAsync();
+                State.PlayingNowMessage = null;
+            }
+
+            if (State.TextChannel != null)
+            {
+                var content = State.Status == VoiceStateStatus.Paused
+                    ? $":notes: **НА ПАУЗЕ** ~~Сейчас играет {trackItem.Track.Title}~~"
+                    : $":notes: Сейчас играет **{trackItem.Track.Title}**";
+
+                State.PlayingNowMessage = await SendMessage(new MessageProperties()
+                        .WithContent(content)
+                        .WithEmbeds([EmbedPropertiesProvider.GetQueueItemEmbed(trackItem)]),
+                    CancellationToken.None);
+            }
         }
-        
-        if (State.TextChannel != null)
+        catch (Exception ex)
         {
-            var content = State.Status == VoiceStateStatus.Paused
-                ? $":notes: **НА ПАУЗЕ** ~~Сейчас играет {trackItem.Track.Title}~~"
-                : $":notes: Сейчас играет **{trackItem.Track.Title}**";
-            
-            State.PlayingNowMessage = await SendMessage(new MessageProperties()
-                    .WithContent(content)
-                    .WithEmbeds([EmbedPropertiesProvider.GetQueueItemEmbed(trackItem)]),
-                CancellationToken.None);
+            logger.LogError(ex, "Error in SendPlayingNowMessage");
         }
     }
     
