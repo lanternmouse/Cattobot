@@ -13,8 +13,7 @@ namespace Cattobot.Services;
 public class FilmService(
     TMDbClient tmdbClient,
     IFilmRepository filmRepo,
-    IMapper mapper,
-    IMemoryCache cache
+    IMapper mapper
     ) : IFilmService
 {
     public async Task<FilmDb> AddFromTmdb(int tmdbId, ulong userId, ulong guildId, bool overwrite = false)

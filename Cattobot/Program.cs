@@ -3,6 +3,9 @@ using Cattobot.Configuration;
 using Cattobot.Db;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
+using Cattobot.Services.Repositories;
+using Cattobot.Wikidata.Gateway;
+using Cattobot.Youtube.Gateway;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -18,8 +21,6 @@ using NetCord.Hosting.Services.ComponentInteractions;
 using NetCord.Services.ComponentInteractions;
 using Serilog;
 using TMDbLib.Client;
-using Wikidata.Gateway;
-using YtDlp.Gateway;
 
 namespace Cattobot;
 
@@ -35,7 +36,6 @@ public class Program
 
         var db = _serviceProvider.GetRequiredService<CattobotDbContext>();
         await db.Database.MigrateAsync();
-        await db.Films.FirstOrDefaultAsync();
 
         host.AddModules(typeof(Program).Assembly);
 
@@ -115,12 +115,21 @@ public class Program
 
             # endregion
             
-            services.AddYtDlp(configuration);
+            services.AddYoutubeIntegration(configuration);
             services.AddWikidataIntegration(configuration);
             
-            services.AddScoped<IFilmRepository, DbFilmRepository>();
-            services.AddScoped<IFilmService, FilmService>();
+            services.AddScoped<IFilmRepository, FilmRepository>();
+            services.AddScoped<ITrackQueueRepository, TrackQueueRepository>();
+            services.AddScoped<ITrackRepository, TrackRepository>();
             
+            services.AddScoped<IFilmService, FilmService>();
+            services.AddScoped<ITrackQueueService, TrackQueueService>();
+            services.AddScoped<IMusicPlayer, MusicPlayer>();
+
+            services.AddSingleton<IVoiceChatService, VoiceChatService>();
+            services.AddSingleton<IMusicPlayerManager, MusicPlayerManager>();
+            services.AddTransient<IMusicPlayer, MusicPlayer>();
+
             services.AddHostedService<WikidataBackgroundService>();
         });
 

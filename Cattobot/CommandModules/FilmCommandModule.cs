@@ -24,7 +24,7 @@ public class FilmCommandModule(
 {
     [SubSlashCommand("add", "Добавить фильм в список запланированных")]
     public async Task<InteractionMessageProperties> AddKinopoisk(
-        [SlashCommandParameter(AutocompleteProviderType = typeof(KinopoiskAutocompleteProvider))] int query)
+        [SlashCommandParameter(AutocompleteProviderType = typeof(FilmSearchAutocompleteHandler))] int query)
     {
         var userId = Context.User.Id;
         var guildId = Context.Guild!.Id;

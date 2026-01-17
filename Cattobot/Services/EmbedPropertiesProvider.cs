@@ -1,11 +1,15 @@
 using System.Globalization;
 using Cattobot.Db.Models;
+using Cattobot.Extensions;
+using Cattobot.Helpers;
 using NetCord.Rest;
 
 namespace Cattobot.Services;
 
 public static class EmbedPropertiesProvider
 {
+    # region Films
+    
     public static EmbedProperties GetShortFilmInfoEmbed(FilmDb filmDb)
     {
         var fields = new List<EmbedFieldProperties>();
@@ -35,7 +39,7 @@ public static class EmbedPropertiesProvider
                 Name = "Длительность",
                 Inline = true,
                 Value = filmDb.Duration != null
-                    ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(filmDb.Duration.Value)).ToString("HH:mm")
+                    ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(filmDb.Duration.Value)).ToNiceDuration()
                     : "Неизвестно"
             },
             new EmbedFieldProperties
@@ -82,7 +86,7 @@ public static class EmbedPropertiesProvider
                 Name = "Длительность",
                 Inline = true,
                 Value = filmDb.Duration != null
-                    ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(filmDb.Duration.Value)).ToString("HH:mm")
+                    ? TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(filmDb.Duration.Value)).ToNiceDuration()
                     : "Неизвестно"
             },
             new EmbedFieldProperties
@@ -99,4 +103,79 @@ public static class EmbedPropertiesProvider
             Fields = fields
         };
     }
+    
+    # endregion
+    
+    # region Music
+    
+    public static EmbedProperties GetTrackEmbed(TrackDb trackDb)
+    {
+        var fields = new List<EmbedFieldProperties>();
+        
+        var props = new EmbedProperties()
+        {
+            Title = trackDb.Title,
+            Url = trackDb.ExternalUrl,
+            Fields = fields
+        };
+
+        if (!string.IsNullOrEmpty(trackDb.ThumbnailUrl))
+            props.Thumbnail = new EmbedThumbnailProperties(trackDb.ThumbnailUrl);
+
+        props.Author = new EmbedAuthorProperties
+        {
+            Url = trackDb.ArtistUrl,
+            Name = trackDb.Artist,
+        };
+        
+        fields.Add(new EmbedFieldProperties
+        {
+            Name = "Длительность",
+            Inline = true,
+            Value = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(trackDb.Duration)).ToNiceDuration()
+        });
+
+        return props;
+    }
+
+    public static EmbedProperties GetQueueItemEmbed(TrackQueueItemDb item)
+    {
+        var trackDb = item.Track;
+        
+        var fields = new List<EmbedFieldProperties>();
+        
+        var props = new EmbedProperties()
+        {
+            Title = trackDb.Title,
+            Url = trackDb.ExternalUrl,
+            Fields = fields
+        };
+
+        if (!string.IsNullOrEmpty(trackDb.ThumbnailUrl))
+            props.Thumbnail = new EmbedThumbnailProperties(trackDb.ThumbnailUrl);
+
+        props.Author = new EmbedAuthorProperties
+        {
+            Url = trackDb.ArtistUrl,
+            Name = trackDb.Artist,
+        };
+        
+        fields.Add(new EmbedFieldProperties
+        {
+            Name = "Добавил",
+            Inline = true,
+            Value = $"<@{item.UserId}>"
+        });
+        
+        fields.Add(new EmbedFieldProperties
+        {
+            Name = "Длительность",
+            Inline = true,
+            Value = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(trackDb.Duration)).ToNiceDuration()
+        });
+
+        return props;
+    }
+
+    # endregion
 }

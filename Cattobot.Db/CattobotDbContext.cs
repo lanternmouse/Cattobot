@@ -10,11 +10,42 @@ public class CattobotDbContext(DbContextOptions<CattobotDbContext> options) : Db
     public DbSet<FilmGuildDb> FilmGuilds { get; set; }
     
     public DbSet<FilmGuildMemberDb> FilmGuildMembers { get; set; }
+    
+    public DbSet<TrackDb> TrackDb { get; set; }
+    public DbSet<TrackQueueDb> TrackQueueDb { get; set; }
+    public DbSet<TrackQueueItemDb> TrackQueueItemDb { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.HasPostgresExtension("pg_trgm");
-        
+
+        builder.Entity<TrackDb>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.ExternalUrl).IsUnique(true);
+        });
+
+        builder.Entity<TrackQueueItemDb>(b =>
+        {
+            b.HasKey(x => x.Id);
+            
+            b.HasOne(x => x.NextItem).WithOne().HasForeignKey<TrackQueueItemDb>(x => x.NextItemId);
+            b.HasOne(x => x.PrevItem).WithOne().HasForeignKey<TrackQueueItemDb>(x => x.PrevItemId);
+
+            b.HasOne(x => x.Track).WithMany().HasForeignKey(x => x.TrackId);
+            b.HasOne(x => x.Queue).WithMany().HasForeignKey(x => x.QueueId);
+
+            b.Property(x => x.AddedOn).HasDefaultValueSql("now()");
+        });
+
+        builder.Entity<TrackQueueDb>(b =>
+        {
+            b.HasKey(x => x.Id);
+            b.HasIndex(x => x.GuildId).IsUnique(true);
+            b.HasOne(x => x.CurrentTrack).WithOne().HasForeignKey<TrackQueueDb>(x => x.CurrentTrackId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
         builder.Entity<FilmDb>(b =>
         {
             b.HasKey(x => x.Id);

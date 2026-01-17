@@ -11,9 +11,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		compose.yaml = compose.yaml
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YtDlp.Gateway", "YtDlp.Gateway\YtDlp.Gateway.csproj", "{233C3796-165C-4524-8A9F-A67A78F1587F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cattobot.Youtube.Gateway", "Cattobot.Youtube.Gateway\Cattobot.Youtube.Gateway.csproj", "{233C3796-165C-4524-8A9F-A67A78F1587F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Wikidata.Gateway", "Wikidata.Gateway\Wikidata.Gateway.csproj", "{0E110BC0-E69C-47C8-BE0F-72F754F61A17}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cattobot.Wikidata.Gateway", "Cattobot.Wikidata.Gateway\Cattobot.Wikidata.Gateway.csproj", "{0E110BC0-E69C-47C8-BE0F-72F754F61A17}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

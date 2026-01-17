@@ -1,11 +1,11 @@
 using Cattobot.Db;
+using Cattobot.Wikidata.Gateway;
+using Cattobot.Wikidata.Gateway.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json.Linq;
-using Wikidata.Gateway;
-using Wikidata.Gateway.Configuration;
 
 namespace Cattobot.Services;
 
