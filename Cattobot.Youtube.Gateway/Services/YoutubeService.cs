@@ -61,7 +61,7 @@ public partial class YoutubeService(
         var responseMessage = await response.Content.ReadAsStringAsync();
 
         return SearchSuggestionRegex().Matches(responseMessage)
-            .Select(match => match.Groups[1].Value);
+            .Select(match => Regex.Unescape(match.Groups[1].Value));
     }
     
     public async Task<YoutubeVideoInfo.Root> GetYoutubeVideoInfo(string uri)
@@ -86,7 +86,7 @@ public partial class YoutubeService(
 
     public async Task<string> GetYoutubeSearchResult(string query)
     {
-        var requestBody = YoutubeSearchRequestBody.Replace("{{0}}", query).Replace("{{1}}", "CAMSAhABGAE=");
+        var requestBody = YoutubeSearchRequestBody.Replace("{{0}}", query).Replace("{{1}}", "EgIQAQ==");
         var url = string.Format(YoutubeSearchRequestUrl, "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w");
 
         var response = await _httpClient.PostAsync(url, new StringContent(requestBody));

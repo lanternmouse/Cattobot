@@ -19,5 +19,6 @@ public static class ProcessExtensions
 
         public void SendSignalStop() => process.SendSignal(19);
         public void SendSignalContinue() => process.SendSignal(18);
+        public void SendSignalClose() => process.SendSignal(2);
     }
 }

@@ -10,38 +10,31 @@ public static class FFmpegProvider
         {
             UseShellExecute = false,
             RedirectStandardOutput = true,
-            CreateNoWindow = true
+            RedirectStandardError = false,
+            CreateNoWindow = true,
+            Arguments = string.Join(" ", [
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "3",
+                "-i", input,
+                "-vn", "-sn", "-dn",
+                "-ar", "48000",
+                "-ac", "2",
+                "-c:a", "pcm_s16le",
+                "-f", "s16le",
+                "-bufsize", "8M",
+                "-probesize", "128K",
+                "-analyzeduration", "5000000",
+                "-loglevel", "8",
+                "-flush_packets", "1",
+                "pipe:1"
+            ]),
         };
-        var arguments = startInfo.ArgumentList;
-        
-        arguments.Add("-vn");
-        
-        arguments.Add("-reconnect");
-        arguments.Add("1");
-        
-        arguments.Add("-reconnect_streamed");
-        arguments.Add("1");
-        
-        arguments.Add("-reconnect_delay_max");
-        arguments.Add("5");
-        
-        arguments.Add("-i");
-        arguments.Add(input);
-        // Set the logging level to quiet mode
-        arguments.Add("-loglevel");
-        arguments.Add("-8");
 
-        arguments.Add("-ac");
-        arguments.Add("2");
-
-        arguments.Add("-f");
-        arguments.Add("s16le");
-
-        arguments.Add("-ar");
-        arguments.Add("48000");
-
-        arguments.Add("pipe:1");
-
-        return Process.Start(startInfo)!;
+        var proc = Process.Start(startInfo)!;
+        
+        proc.ErrorDataReceived += (s, e) => Console.WriteLine(e.Data);
+        
+        return proc;
     }
 }

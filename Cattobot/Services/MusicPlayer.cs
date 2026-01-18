@@ -5,6 +5,7 @@ using Cattobot.Helpers;
 using Cattobot.Models;
 using Cattobot.Services.Abstractions;
 using Cattobot.Youtube.Gateway.Services.Abstractions;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NetCord;
 using NetCord.Gateway.Voice;
@@ -15,13 +16,11 @@ namespace Cattobot.Services;
 public class MusicPlayer(
     IYoutubeService youtubeService,
     ILogger<MusicPlayer> logger,
-    ITrackQueueRepository queueRepo,
+    IServiceScopeFactory serviceScopeFactory,
     IVoiceChatService voiceChatService)
     : IMusicPlayer
 {
     public MusicPlayerContext State { get; set; } = new();
-    private Stream VoiceStream { get; set; } = null!;
-    private OpusEncodeStream OpusStream { get; set; } = null!;
 
     public void StartQueueIfStopped(CancellationToken ct = default)
     {
@@ -46,6 +45,9 @@ public class MusicPlayer(
 
     private async Task StartQueue(CancellationToken ct = default)
     {
+        using var scope = serviceScopeFactory.CreateScope();
+        var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
+        
         var voiceClient = voiceChatService.GetVoiceClient(State.GuildId);
         
         if (voiceClient == null) return;
@@ -106,15 +108,21 @@ public class MusicPlayer(
 
     public async Task SkipTo(Guid? itemId, CancellationToken ct = default)
     {
+        using var scope = serviceScopeFactory.CreateScope();
+        var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
+        
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         await queueRepo.SetCurrentItem(queue.Id, itemId, ct);
         
         State.IsSkipped = true;
-        State.EncodingProcess?.Kill();
+        CloseEncodingProcess();
     }
 
     public async Task SkipForward(CancellationToken ct = default)
     {
+        using var scope = serviceScopeFactory.CreateScope();
+        var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
+        
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
@@ -124,6 +132,9 @@ public class MusicPlayer(
     
     public async Task SkipBackward(CancellationToken ct = default)
     {
+        using var scope = serviceScopeFactory.CreateScope();
+        var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
+        
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
         
@@ -134,6 +145,9 @@ public class MusicPlayer(
     
     public async Task Resume(CancellationToken ct = default)
     {
+        using var scope = serviceScopeFactory.CreateScope();
+        var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
+        
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
         
@@ -148,6 +162,9 @@ public class MusicPlayer(
     
     public async Task Pause(CancellationToken ct = default)
     {
+        using var scope = serviceScopeFactory.CreateScope();
+        var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
+        
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
         
@@ -163,10 +180,7 @@ public class MusicPlayer(
     public void Stop()
     {
         State.Status = MusicPlayerStatus.Stopped;
-        
-        State.EncodingProcess?.Kill();
-        State.EncodingProcess?.Dispose();
-        State.EncodingProcess = null;
+        CloseEncodingProcess();
     }
 
     private async Task PlayTrack(TrackQueueItemDb trackItem, CancellationToken ct = default)
@@ -182,12 +196,15 @@ public class MusicPlayer(
                 var voiceClient = voiceChatService.GetVoiceClient(State.GuildId);
 
                 if (voiceClient == null) return;
-                
-                VoiceStream = voiceClient.CreateOutputStream(normalizeSpeed: true);
 
-                OpusStream = new OpusEncodeStream(VoiceStream, PcmFormat.Short, VoiceChannels.Stereo, OpusApplication.Audio);
-                
-                await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(OpusStream, ct);
+                await using var voiceStream = voiceClient.CreateOutputStream(normalizeSpeed: true);
+
+                await using var opusStream = new OpusEncodeStream(voiceStream, PcmFormat.Short, VoiceChannels.Stereo,
+                    OpusApplication.Audio);
+
+                await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, 4 * 1024 * 1024, ct);
+
+                await opusStream.FlushAsync(ct);
             }
             catch (ObjectDisposedException _)
             {
@@ -201,10 +218,7 @@ public class MusicPlayer(
                 await SendErrorMessage(trackItem, ex.Message);
             }
             
-            await VoiceStream.DisposeAsync();
-            await OpusStream.FlushAsync(ct);
-            if (State.EncodingProcess != null) await State.EncodingProcess.WaitForExitAsync(ct);
-            State.EncodingProcess?.Kill();
+            CloseEncodingProcess();
             break;
         }
     }
@@ -279,5 +293,21 @@ public class MusicPlayer(
         }
 
         return message;
+    }
+    
+    private void CloseEncodingProcess()
+    {
+        try
+        {
+            State.EncodingProcess?.SendSignalContinue();
+            State.EncodingProcess?.SendSignalClose();
+        }
+        catch
+        {
+            // ignored
+        }
+
+        State.EncodingProcess?.Dispose();
+        State.EncodingProcess = null;
     }
 }

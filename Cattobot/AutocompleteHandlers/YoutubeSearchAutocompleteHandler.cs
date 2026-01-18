@@ -1,3 +1,4 @@
+using Cattobot.Extensions;
 using Cattobot.Youtube.Gateway.Services.Abstractions;
 using Microsoft.Extensions.Caching.Memory;
 using NetCord;
@@ -38,7 +39,8 @@ public class YoutubeSearchAutocompleteHandler(
         }
 
         var results = suggestions
-            .Select(s => new ApplicationCommandOptionChoiceProperties(s, s));
+            .Select(s =>
+                new ApplicationCommandOptionChoiceProperties(s.LimitWithEllipsis(100), s.LimitWithEllipsis(100)));
 
         return results.Take(25);
     }

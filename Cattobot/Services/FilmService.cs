@@ -4,7 +4,6 @@ using Cattobot.Exceptions;
 using Cattobot.Services.Abstractions;
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Caching.Memory;
 using TMDbLib.Client;
 using TMDbLib.Objects.Movies;
 
@@ -13,6 +12,7 @@ namespace Cattobot.Services;
 public class FilmService(
     TMDbClient tmdbClient,
     IFilmRepository filmRepo,
+    IWikidataService wikidataService,
     IMapper mapper
     ) : IFilmService
 {
@@ -37,6 +37,9 @@ public class FilmService(
 
         var film = await tmdbClient.GetMovieAsync(tmdbId, MovieMethods.Credits | MovieMethods.ExternalIds);
         var filmDb = mapper.Map<FilmDb>(film!);
+
+        if (filmDb.WikidataId != null)
+            filmDb.KinopoiskId = await wikidataService.GetKinopoiskId(filmDb.WikidataId);
         
         filmDb.TmdbLastSynced = DateTime.UtcNow;
 
