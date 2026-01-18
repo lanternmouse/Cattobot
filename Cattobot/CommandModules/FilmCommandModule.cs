@@ -23,9 +23,11 @@ public class FilmCommandModule(
     ) : ApplicationCommandModule<ApplicationCommandContext>
 {
     [SubSlashCommand("add", "Добавить фильм в список запланированных")]
-    public async Task<InteractionMessageProperties> AddKinopoisk(
+    public async Task Add(
         [SlashCommandParameter(AutocompleteProviderType = typeof(FilmSearchAutocompleteHandler))] int query)
     {
+        await RespondAsync(InteractionCallback.DeferredMessage());
+        
         var userId = Context.User.Id;
         var guildId = Context.Guild!.Id;
 
@@ -36,7 +38,7 @@ public class FilmCommandModule(
         }
         catch (FilmAlreadyExistsAsNonPlannedException)
         {
-            return new InteractionMessageProperties()
+            await FollowupAsync(new InteractionMessageProperties()
                 .WithContent("Данный фильм уже был просмотрен ранее")
                 .WithFlags(MessageFlags.Ephemeral)
                 .WithComponents([
@@ -45,20 +47,22 @@ public class FilmCommandModule(
                             new ButtonProperties($"filmAdd:{query}", "Всё равно добавить", ButtonStyle.Primary)
                         }
                     ]
-                );
+                ));
+            return;
         }
         catch (FilmAlreadyExistsException)
         {
-            return new InteractionMessageProperties()
+            await FollowupAsync(new InteractionMessageProperties()
                 .WithContent("Фильм уже в вашем списке запланированных")
-                .WithFlags(MessageFlags.Ephemeral);
+                .WithFlags(MessageFlags.Ephemeral));
+            return;
         }
 
-        return new InteractionMessageProperties()
+        await FollowupAsync(new InteractionMessageProperties()
             .WithContent($"Добавлен фильм **{FilmHelper.BuildTitleWithMarkdownUrl(filmDb)}** в список запланированных")
             .WithEmbeds([
                 EmbedPropertiesProvider.GetShortFilmInfoEmbed(filmDb)
-            ]);
+            ]));
     }
 
     [SubSlashCommand("list", "Получить список добавленных фильмов")]
