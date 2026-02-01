@@ -22,10 +22,10 @@ public class MusicPlayer(
 {
     public MusicPlayerContext State { get; set; } = new();
 
-    public void StartQueueIfStopped(CancellationToken ct = default)
+    public void StartQueueIfStopped(Guid? initialTrackItemId, CancellationToken ct = default)
     {
         if (State.Status != MusicPlayerStatus.Stopped) return;
-        _ = Task.Run(async () => await StartQueue(ct), ct);
+        _ = Task.Run(async () => await StartQueue(initialTrackItemId, ct), ct);
     }
 
     public void SetTextChannel(TextChannel textChannel)
@@ -37,52 +37,49 @@ public class MusicPlayer(
     {
         State.CommandInteractionToReply = interaction;
     }
-    
+
     public void SetButtonInteractionToFollowup(ButtonInteraction interaction)
     {
         State.ButtonInteractionToReply = interaction;
     }
 
-    private async Task StartQueue(CancellationToken ct = default)
+    private async Task StartQueue(Guid? initialTrackItemId, CancellationToken ct = default)
     {
         using var scope = serviceScopeFactory.CreateScope();
         var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
-        
+
         var voiceClient = voiceChatService.GetVoiceClient(State.GuildId);
-        
+
         if (voiceClient == null) return;
-        
+
         State.Status = MusicPlayerStatus.Playing;
 
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
-        
+
+        if (initialTrackItemId != null)
+        {
+            await queueRepo.SetCurrentItem(queue.Id, initialTrackItemId.Value, ct);
+            initialTrackItemId = null;
+        }
+
+        var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
+
+        if (currentItem == null)
+        {
+            currentItem = await queueRepo.GetFirstItem(queue.Id, ct);
+            await queueRepo.SetCurrentItem(queue.Id, currentItem?.Id, ct);
+        }
+
         try
         {
             while (State.Status != MusicPlayerStatus.Stopped && voiceClient != null)
             {
                 State.Status = MusicPlayerStatus.Playing;
-                
-                var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
-                
-                if (currentItem == null)
-                {
-                    currentItem = await queueRepo.GetLastItem(queue.Id, ct);
-                    await queueRepo.SetCurrentItem(queue.Id, currentItem?.Id, ct);
-                }
-                else
-                {
-                    if (!State.IsSkipped)
-                        await queueRepo.SetCurrentItem(queue.Id, currentItem.NextItemId, ct);
-                    
-                    currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
-                }
 
-                if (State.IsSkipped) State.IsSkipped = false;
-                
                 if (currentItem == null) break;
 
                 await SendPlayingNowMessage(currentItem);
-                
+
                 try
                 {
                     await PlayTrack(currentItem, ct);
@@ -91,9 +88,19 @@ public class MusicPlayer(
                 {
                     await SendErrorMessage(currentItem, ex.Message);
                 }
-                
+
+                currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
+
+                if (!State.IsSkipped)
+                {
+                    await queueRepo.SetCurrentItem(queue.Id, currentItem?.NextItemId, ct);
+                    currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
+                }
+
+                if (State.IsSkipped) State.IsSkipped = false;
+
                 voiceClient = voiceChatService.GetVoiceClient(State.GuildId);
-                
+
                 ct.ThrowIfCancellationRequested();
             }
         }
@@ -110,10 +117,10 @@ public class MusicPlayer(
     {
         using var scope = serviceScopeFactory.CreateScope();
         var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
-        
+
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         await queueRepo.SetCurrentItem(queue.Id, itemId, ct);
-        
+
         State.IsSkipped = true;
         CloseEncodingProcess();
     }
@@ -122,58 +129,58 @@ public class MusicPlayer(
     {
         using var scope = serviceScopeFactory.CreateScope();
         var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
-        
+
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
 
         await SkipTo(currentItem?.NextItemId, ct);
     }
-    
+
     public async Task SkipBackward(CancellationToken ct = default)
     {
         using var scope = serviceScopeFactory.CreateScope();
         var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
-        
+
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
-        
+
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
 
         await SkipTo(currentItem?.PrevItemId, ct);
     }
-    
+
     public async Task Resume(CancellationToken ct = default)
     {
         using var scope = serviceScopeFactory.CreateScope();
         var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
-        
+
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
-        
+
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
         if (currentItem == null) return;
-        
+
         State.EncodingProcess?.SendSignalContinue();
         if (State.Status == MusicPlayerStatus.Paused) State.Status = MusicPlayerStatus.Playing;
-        
+
         await SendPlayingNowMessage(currentItem);
     }
-    
+
     public async Task Pause(CancellationToken ct = default)
     {
         using var scope = serviceScopeFactory.CreateScope();
         var queueRepo = scope.ServiceProvider.GetRequiredService<ITrackQueueRepository>();
-        
+
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
-        
+
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
         if (currentItem == null) return;
-        
+
         State.EncodingProcess?.SendSignalStop();
         if (State.Status == MusicPlayerStatus.Playing) State.Status = MusicPlayerStatus.Paused;
-        
+
         await SendPlayingNowMessage(currentItem);
     }
 
@@ -185,6 +192,8 @@ public class MusicPlayer(
 
     private async Task PlayTrack(TrackQueueItemDb trackItem, CancellationToken ct = default)
     {
+        CloseEncodingProcess();
+
         var sourceUrl = await youtubeService.GetAudioStreamUrl(trackItem.Track.ExternalUrl);
         State.EncodingProcess = FFmpegProvider.StartEncodeProcess(sourceUrl);
 
@@ -206,7 +215,7 @@ public class MusicPlayer(
 
                 await opusStream.FlushAsync(ct);
             }
-            catch (ObjectDisposedException _)
+            catch (ObjectDisposedException)
             {
                 logger.LogDebug("Voice client disposed. Retrying...");
                 await Task.Delay(100, ct);
@@ -217,7 +226,7 @@ public class MusicPlayer(
             {
                 await SendErrorMessage(trackItem, ex.Message);
             }
-            
+
             CloseEncodingProcess();
             break;
         }
@@ -278,7 +287,10 @@ public class MusicPlayer(
         }
         else if (State.ButtonInteractionToReply != null)
         {
-            message = await State.PlayingNowMessage!.ModifyAsync(a =>
+            if (State.PlayingNowMessage == null)
+                State.PlayingNowMessage = await State.TextChannel!.SendMessageAsync(messageProperties, cancellationToken: ct);
+
+            message = await State.PlayingNowMessage.ModifyAsync(a =>
                 a.WithContent(messageProperties.Content)
                     .WithEmbeds(messageProperties.Embeds)
                     .AddComponents(messageProperties.Components ?? []), cancellationToken: ct);
@@ -294,7 +306,7 @@ public class MusicPlayer(
 
         return message;
     }
-    
+
     private void CloseEncodingProcess()
     {
         try

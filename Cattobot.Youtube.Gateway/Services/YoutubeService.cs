@@ -6,14 +6,20 @@ using Cattobot.Youtube.Gateway.Models;
 using Cattobot.Youtube.Gateway.Services.Abstractions;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using YoutubeDLSharp;
+using Microsoft.Extensions.Caching.Memory;
+using System.Web;
 
 namespace Cattobot.Youtube.Gateway.Services;
 
 public partial class YoutubeService(
-    IOptions<YtDlpOptions> options
+    IOptions<YtDlpOptions> options,
+    IMemoryCache cache
     ) : IYoutubeService
 {
     private string? _visitorData;
+
+    private readonly YoutubeDL _ytdl = new YoutubeDL();
 
     private readonly HttpClient _httpClient = new()
     {
@@ -29,33 +35,58 @@ public partial class YoutubeService(
     private const string YoutubeSearchRequestBody =
         // lang=json
         """{"query": "{{0}}", "params": "{{1}}", "context": {"client": {"clientName": "ANDROID", "clientVersion": "20.10.38", "androidSdkVersion": 35, "userInterfaceTheme": "USER_INTERFACE_THEME_DARK", "hl": "en", "gl": "US", "deviceMake": "Google", "deviceModel": "Pixel 9 Pro"}}}""";
-    
+
     private const string YoutubeVideoRequestUrl = "https://www.youtube.com/youtubei/v1/player?key={0}";
 
     private const string YoutubeVideoRequestBody =
         // lang=json
         """{"videoId": "{0}", "contentCheckOk": true, "context": {"client": {"clientName": "ANDROID", "clientVersion": "20.10.38", "visitorData": "{1}", "osVersion": "12", "hl": "en", "gl": "US", "platform": "MOBILE", "osName": "Android"}}}""";
-    
-    public async Task<string> GetAudioStreamUrl(string uri)
+
+    public async Task<string> GetAudioStreamUrl(string url)
     {
-        var info = await GetYoutubeVideoInfo(uri);
-        
-        var itags = new[] { 774, 251, 141, 250, 140 };
-        
+        var cacheKey = $"ytdl:{url}";
+
+        string? streamUrl = null;
+
+        if (cache.TryGetValue<string>(cacheKey, out streamUrl))
+        {
+            var uri = new Uri(streamUrl!);
+            var query = HttpUtility.ParseQueryString(uri.Query);
+            var expireString = query["expire"];
+
+            if (long.TryParse(expireString, out var expireUnixSeconds))
+            {
+                var expireDate = DateTimeOffset.FromUnixTimeSeconds(expireUnixSeconds).UtcDateTime;
+                var now = DateTime.UtcNow;
+                if (now < expireDate)
+                {
+                    return streamUrl!;
+                }
+            }
+        }
+
+        var data = await _ytdl.RunVideoDataFetch(url);
+
+        var itags = new[] { "774", "251", "141", "250", "140" };
+
         foreach (var itag in itags)
         {
-            var format = info.StreamingData.AdaptiveFormats.FirstOrDefault(x => x.Itag == itag);
+            var format = data.Data.Formats.FirstOrDefault(x => x.FormatId == itag);
             if (format != null)
-                return format.Url;
+            {
+                streamUrl = format.Url;
+                cache.Set<string>(cacheKey, streamUrl);
+                return streamUrl;
+            }
         }
-        
+
         return "";
     }
-    
+
     public async Task<IEnumerable<string>> GetYoutubeSearchSuggestions(string query)
     {
         var response = await _httpClient.GetAsync(string.Format(YoutubeSearchUrl, Uri.EscapeDataString(query), query.Length));
-        
+
         response.EnsureSuccessStatusCode();
 
         var responseMessage = await response.Content.ReadAsStringAsync();
@@ -63,18 +94,18 @@ public partial class YoutubeService(
         return SearchSuggestionRegex().Matches(responseMessage)
             .Select(match => Regex.Unescape(match.Groups[1].Value));
     }
-    
+
     public async Task<YoutubeVideoInfo.Root> GetYoutubeVideoInfo(string uri)
     {
         await GetVisitorData();
-        
+
         var videoId = uri.Split("v=")[1];
 
         var requestBody = YoutubeVideoRequestBody.Replace("{0}", videoId).Replace("{1}", _visitorData);
         var url = string.Format(YoutubeVideoRequestUrl, "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w");
 
         var response = await _httpClient.PostAsync(url, new StringContent(requestBody));
-        
+
         response.EnsureSuccessStatusCode();
 
         var responseMessage = await response.Content.ReadAsStringAsync();
@@ -90,7 +121,7 @@ public partial class YoutubeService(
         var url = string.Format(YoutubeSearchRequestUrl, "AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w");
 
         var response = await _httpClient.PostAsync(url, new StringContent(requestBody));
-        
+
         response.EnsureSuccessStatusCode();
 
         var responseMessage = await response.Content.ReadAsStringAsync();

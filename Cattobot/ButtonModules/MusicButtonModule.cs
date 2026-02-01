@@ -17,7 +17,7 @@ public class MusicButtonModule(
     public async Task Add(string incomingTrackId)
     {
         if (!await IsInSameChannel(Context)) return;
-        
+
         var trackId = Guid.Parse(incomingTrackId);
 
         var queue = await trackQueueRepository.GetOrCreate(Context.Guild!.Id);
@@ -38,7 +38,7 @@ public class MusicButtonModule(
     public async Task MusicSkipTo(string incomingItemId, string incomingTrackId)
     {
         if (!await IsInSameChannel(Context)) return;
-        
+
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
 
         var itemId = Guid.Parse(incomingItemId);
@@ -65,7 +65,7 @@ public class MusicButtonModule(
             {
                 await voiceChatService.TryConnect(Context.Guild.Id, voiceState.ChannelId!.Value);
                 player.SetTextChannel(Context.Channel);
-                player.StartQueueIfStopped();
+                player.StartQueueIfStopped(itemId);
             }
         }
     }
@@ -74,7 +74,7 @@ public class MusicButtonModule(
     public async Task MusicSkipForward()
     {
         if (!await IsInSameChannel(Context)) return;
-        
+
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
         player.SetButtonInteractionToFollowup(Context.Interaction);
         await player.SkipForward();
@@ -84,7 +84,7 @@ public class MusicButtonModule(
     public async Task MusicSkipBackward()
     {
         if (!await IsInSameChannel(Context)) return;
-        
+
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
         player.SetButtonInteractionToFollowup(Context.Interaction);
         await player.SkipBackward();
@@ -94,22 +94,22 @@ public class MusicButtonModule(
     public async Task MusicResume()
     {
         if (!await IsInSameChannel(Context)) return;
-        
+
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
         player.SetButtonInteractionToFollowup(Context.Interaction);
         await player.Resume();
     }
-    
+
     [ComponentInteraction("musicPause")]
     public async Task MusicPause()
     {
         if (!await IsInSameChannel(Context)) return;
-        
+
         var player = playerManager.GetOrCreate(Context.Guild!.Id);
         player.SetButtonInteractionToFollowup(Context.Interaction);
         await player.Pause();
     }
-    
+
     private async Task<bool> IsInSameChannel(ButtonInteractionContext interactionContext)
     {
         if (!Context.Guild!.VoiceStates.TryGetValue(Context.User.Id, out var voiceState))
