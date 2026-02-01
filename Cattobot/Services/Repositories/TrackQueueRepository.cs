@@ -55,6 +55,59 @@ public class TrackQueueRepository(
         return id;
     }
 
+    public async Task<Guid> AppendRange(Guid queueId, List<Guid> trackIds, ulong userId, CancellationToken ct = default)
+    {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+
+        var lastItem = await GetLastItem(queueId, ct);
+        
+        List<TrackQueueItemDb> items = [];
+        foreach (var trackId in trackIds)
+        {
+            var newItem = new TrackQueueItemDb
+            {
+                Id = Guid.CreateVersion7(),
+                TrackId = trackId,
+                QueueId = queueId,
+                PrevItemId = null,
+                NextItemId = null,
+                AddedOn = DateTime.UtcNow,
+                UserId = userId
+            };
+            items.Add(newItem);
+        }
+        dbContext.TrackQueueItemDb.AddRange(items);
+        await dbContext.SaveChangesAsync(ct);
+
+        for (var i = 0; i < items.Count; i++)
+        {
+            TrackQueueItemDb? prev = null;
+            TrackQueueItemDb? next = null;
+
+            if (i > 0)
+                prev = items[i - 1];
+            if (i + 1 < items.Count)
+                next = items[i + 1];
+
+            items[i].PrevItemId = prev?.Id;
+            items[i].NextItemId = next?.Id;
+        }
+        
+        var firstItemId = items[0].Id;
+
+        if (lastItem != null)
+        {
+            dbContext.Attach(lastItem);
+            lastItem.NextItemId = firstItemId;
+        }
+        
+        await dbContext.SaveChangesAsync(ct);
+
+        await transaction.CommitAsync(ct);
+
+        return firstItemId;
+    }
+
     public async Task<TrackQueueItemDb?> GetItem(Guid itemId, CancellationToken ct = default)
     {
         return await dbContext.TrackQueueItemDb.AsNoTracking()

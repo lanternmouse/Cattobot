@@ -7,6 +7,7 @@ public interface ITrackQueueRepository
     Task<TrackQueueDb> GetOrCreate(ulong guildId, CancellationToken ct = default);
 
     Task<Guid> Append(Guid queueId, Guid trackId, ulong userId, CancellationToken ct = default);
+    Task<Guid> AppendRange(Guid queueId, List<Guid> trackIds, ulong userId, CancellationToken ct = default);
 
     Task<TrackQueueItemDb?> GetItem(Guid itemId, CancellationToken ct = default);
     

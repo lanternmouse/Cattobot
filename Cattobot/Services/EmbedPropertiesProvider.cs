@@ -3,6 +3,7 @@ using Cattobot.Db.Models;
 using Cattobot.Extensions;
 using Cattobot.Helpers;
 using NetCord.Rest;
+using YoutubeDLSharp.Metadata;
 
 namespace Cattobot.Services;
 
@@ -107,7 +108,51 @@ public static class EmbedPropertiesProvider
     # endregion
     
     # region Music
-    
+
+    public static EmbedProperties GetPlaylistItemEmbed(VideoData item, ulong userId)
+    {
+        var fields = new List<EmbedFieldProperties>();
+        
+        var props = new EmbedProperties()
+        {
+            Title = item.Title,
+            Url = item.WebpageUrl ?? item.Url,
+            Fields = fields
+        };
+
+        if (item.Thumbnails.Length > 0)
+            props.Thumbnail = new EmbedThumbnailProperties(item.Thumbnails.Last().Url);
+
+        props.Author = new EmbedAuthorProperties
+        {
+            Url = item.ChannelUrl,
+            Name = item.Channel,
+        };
+        
+        fields.Add(new EmbedFieldProperties
+        {
+            Name = "Добавил",
+            Inline = true,
+            Value = $"<@{userId}>"
+        });
+        
+        fields.Add(new EmbedFieldProperties
+        {
+            Name = "Кол-во треков",
+            Inline = true,
+            Value = item.Entries.Length.ToString()
+        });
+
+        fields.Add(new EmbedFieldProperties
+        {
+            Name = "Общая длительность",
+            Inline = true,
+            Value = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(item.Entries.Sum(e => e.Duration ?? 0))).ToNiceDuration()
+        });
+
+        return props;
+    }
+
     public static EmbedProperties GetTrackItemEmbed(TrackQueueItemDb item)
     {
         var trackDb = item.Track;

@@ -1,11 +1,11 @@
 using Cattobot.AutocompleteHandlers;
 using Cattobot.Db.Models.Enums;
-using Cattobot.Helpers;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
 using NetCord;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
+using YoutubeDLSharp.Metadata;
 
 namespace Cattobot.CommandModules;
 
@@ -39,16 +39,26 @@ public class MusicCommandModule(
         {
             await voiceChatService.TryConnect(Context.Guild!.Id, voiceState.ChannelId!.Value);
 
-            var trackItem = await trackQueueService.EnqueueFromQuery(guild.Id, Context.User.Id, query);
+            var enqueued = await trackQueueService.EnqueueFromQuery(guild.Id, Context.User.Id, query);
 
             var player = musicPlayerManager.GetOrCreate(guild.Id);
             player.SetTextChannel(Context.Channel);
-            player.StartQueueIfStopped(trackItem.Id);
+            player.StartQueueIfStopped(enqueued.item.Id);
 
-            await FollowupAsync(new InteractionMessageProperties()
-                .WithContent($":cd: В очередь добавлен трек **{trackItem.Track.Title}**")
-                .WithEmbeds([EmbedPropertiesProvider.GetTrackItemEmbed(trackItem)])
-                .WithComponents([ComponentsPropertiesProvider.AddedTrackItemComponents(trackItem)]));
+            if (enqueued.videoData.ResultType != MetadataType.Playlist)
+            {
+                await FollowupAsync(new InteractionMessageProperties()
+                    .WithContent($":cd: В очередь добавлен трек **{enqueued.item.Track.Title}**")
+                    .WithEmbeds([EmbedPropertiesProvider.GetTrackItemEmbed(enqueued.item)])
+                    .WithComponents([ComponentsPropertiesProvider.AddedTrackItemComponents(enqueued.item)]));
+            }
+            else
+            {
+                await FollowupAsync(new InteractionMessageProperties()
+                    .WithContent($":cd: В очередь добавлен плейлист **{enqueued.videoData.Title}**")
+                    .WithEmbeds([EmbedPropertiesProvider.GetPlaylistItemEmbed(enqueued.videoData, enqueued.item.UserId)])
+                    .WithComponents([ComponentsPropertiesProvider.AddedPlaylistItemComponents(enqueued.item)]));
+            }
         }
         catch (Exception e)
         {

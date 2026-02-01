@@ -43,7 +43,18 @@ public static class ComponentsPropertiesProvider
 
         return props;
     }
-    
+
+    public static ActionRowProperties AddedPlaylistItemComponents(TrackQueueItemDb itemDb)
+    {
+        var props = new ActionRowProperties();
+
+        props.AddComponents(
+            new ButtonProperties($"musicSkipTo:{itemDb.Id}:{itemDb.TrackId}", "Играть сейчас", ButtonStyle.Secondary));
+            // new ButtonProperties($"musicAdd:{itemDb.TrackId}", "Добавить в очередь", ButtonStyle.Secondary));
+
+        return props;
+    }
+
     public static ActionRowProperties AddedTrackItemComponents(TrackQueueItemDb itemDb)
     {
         var props = new ActionRowProperties();

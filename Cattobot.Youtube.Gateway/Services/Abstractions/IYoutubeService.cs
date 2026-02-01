@@ -1,4 +1,4 @@
-using Cattobot.Youtube.Gateway.Models;
+using YoutubeDLSharp.Metadata;
 
 namespace Cattobot.Youtube.Gateway.Services.Abstractions;
 
@@ -10,5 +10,5 @@ public interface IYoutubeService
 
     Task<string> GetYoutubeSearchResult(string query);
 
-    Task<YoutubeVideoInfo.Root> GetYoutubeVideoInfo(string uri);
+    Task<VideoData> GetYoutubeVideoInfo(string uri);
 }
