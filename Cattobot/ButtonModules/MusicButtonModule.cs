@@ -50,6 +50,14 @@ public class MusicButtonModule(
             var trackId = Guid.Parse(incomingTrackId!);
             var queue = await trackQueueRepository.GetOrCreate(Context.Guild!.Id);
             itemId = await trackQueueRepository.Append(queue.Id, trackId, Context.User.Id);
+
+            item = await trackQueueRepository.GetItem(itemId);
+            
+            await Context.Channel.SendMessageAsync(new MessageProperties()
+                .WithContent($":cd: В очередь добавлен трек **{item!.Track.Title}**")
+                .WithEmbeds([EmbedPropertiesProvider.GetTrackItemEmbed(item)])
+                .WithComponents([ComponentsPropertiesProvider.AddedTrackItemComponents(item)])
+            );
         }
 
         if (player.State.Status != MusicPlayerStatus.Stopped)

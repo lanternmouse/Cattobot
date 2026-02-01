@@ -48,8 +48,8 @@ public static class ComponentsPropertiesProvider
     {
         var props = new ActionRowProperties();
 
-        props.AddComponents(
-            new ButtonProperties($"musicSkipTo:{itemDb.Id}:{itemDb.TrackId}", "Играть сейчас", ButtonStyle.Secondary));
+        // props.AddComponents(
+            // new ButtonProperties($"musicSkipTo:{itemDb.Id}:{itemDb.TrackId}", "Играть сейчас", ButtonStyle.Secondary));
             // new ButtonProperties($"musicAdd:{itemDb.TrackId}", "Добавить в очередь", ButtonStyle.Secondary));
 
         return props;
