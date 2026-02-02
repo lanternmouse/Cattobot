@@ -4,7 +4,7 @@ namespace Cattobot.Youtube.Gateway.Services.Abstractions;
 
 public interface IYoutubeService
 {
-    Task<string> GetAudioStreamUrl(string uri);
+    Task<string> GetAudioStreamUrl(string uri, CancellationToken ct);
 
     Task<IEnumerable<string>> GetYoutubeSearchSuggestions(string query);
 

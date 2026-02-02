@@ -22,6 +22,8 @@ public class MusicPlayer(
 {
     public MusicPlayerContext State { get; set; } = new();
 
+    private CancellationTokenSource TrackCancellationTokenSource { get; set; } = new();
+
     public void StartQueueIfStopped(Guid? initialTrackItemId, CancellationToken ct = default)
     {
         if (State.Status != MusicPlayerStatus.Stopped) return;
@@ -82,7 +84,14 @@ public class MusicPlayer(
 
                 try
                 {
-                    await PlayTrack(currentItem, ct);
+                    TrackCancellationTokenSource.Dispose();
+                    TrackCancellationTokenSource = new CancellationTokenSource();
+                    
+                    await PlayTrack(currentItem, TrackCancellationTokenSource.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // ignore
                 }
                 catch (Exception ex)
                 {
@@ -122,7 +131,8 @@ public class MusicPlayer(
         await queueRepo.SetCurrentItem(queue.Id, itemId, ct);
 
         State.IsSkipped = true;
-        CloseEncodingProcess();
+        
+        await TrackCancellationTokenSource.CancelAsync();
     }
 
     public async Task SkipForward(CancellationToken ct = default)
@@ -133,7 +143,7 @@ public class MusicPlayer(
         var queue = await queueRepo.GetOrCreate(State.GuildId, ct);
         if (queue.CurrentTrackId == null) return;
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
-
+        
         await SkipTo(currentItem?.NextItemId, ct);
     }
 
@@ -194,7 +204,8 @@ public class MusicPlayer(
     {
         CloseEncodingProcess();
 
-        var sourceUrl = await youtubeService.GetAudioStreamUrl(trackItem.Track.ExternalUrl);
+        var sourceUrl = await youtubeService.GetAudioStreamUrl(trackItem.Track.ExternalUrl, ct);
+        
         State.EncodingProcess = FFmpegProvider.StartEncodeProcess(sourceUrl);
 
         var tries = 0;
@@ -214,6 +225,10 @@ public class MusicPlayer(
                 await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, 4 * 1024 * 1024, ct);
 
                 await opusStream.FlushAsync(ct);
+            }
+            catch (OperationCanceledException)
+            {
+                // ignore
             }
             catch (ObjectDisposedException)
             {

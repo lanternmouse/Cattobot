@@ -1,11 +1,5 @@
-using System.Net.Http.Headers;
-using System.Text.Json;
 using System.Text.RegularExpressions;
-using Cattobot.Youtube.Gateway.Configuration;
-using Cattobot.Youtube.Gateway.Models;
 using Cattobot.Youtube.Gateway.Services.Abstractions;
-using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using YoutubeDLSharp;
 using Microsoft.Extensions.Caching.Memory;
 using System.Web;
@@ -14,12 +8,9 @@ using YoutubeDLSharp.Metadata;
 namespace Cattobot.Youtube.Gateway.Services;
 
 public partial class YoutubeService(
-    IOptions<YtDlpOptions> options,
     IMemoryCache cache
     ) : IYoutubeService
 {
-    private string? _visitorData;
-
     private readonly YoutubeDL _ytdl = new();
 
     private readonly HttpClient _httpClient = new()
@@ -37,7 +28,7 @@ public partial class YoutubeService(
         // lang=json
         """{"query": "{{0}}", "context": {"client": {"clientName": "ANDROID", "clientVersion": "20.10.38", "androidSdkVersion": 35, "userInterfaceTheme": "USER_INTERFACE_THEME_DARK", "hl": "en", "gl": "US", "deviceMake": "Google", "deviceModel": "Pixel 9 Pro"}}}""";
 
-    public async Task<string> GetAudioStreamUrl(string url)
+    public async Task<string> GetAudioStreamUrl(string url, CancellationToken ct)
     {
         var cacheKey = $"ytdl:{url}";
 
@@ -58,7 +49,7 @@ public partial class YoutubeService(
             }
         }
 
-        var data = await _ytdl.RunVideoDataFetch(url);
+        var data = await _ytdl.RunVideoDataFetch(url, ct);
 
         var itags = new[] { "774", "251", "141", "250", "140" };
 
