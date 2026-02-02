@@ -63,7 +63,7 @@ public class MusicCommandModule(
         }
         catch (Exception e)
         {
-            await FollowupAsync(new InteractionMessageProperties().WithContent(e.Message));
+            await FollowupAsync(new InteractionMessageProperties().WithContent(e.Message + "\n" + e.StackTrace));
         }
     }
 
