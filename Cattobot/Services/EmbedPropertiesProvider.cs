@@ -121,13 +121,22 @@ public static class EmbedPropertiesProvider
         };
 
         if (item.Thumbnails.Length > 0)
-            props.Thumbnail = new EmbedThumbnailProperties(item.Thumbnails.Last().Url);
-
-        props.Author = new EmbedAuthorProperties
         {
-            Url = item.ChannelUrl,
-            Name = item.Channel,
-        };
+            var url = item.Thumbnails.Length > 1 ? item.Thumbnails[^2].Url : item.Thumbnails[^1].Url;
+            props.Thumbnail = new EmbedThumbnailProperties(url);
+        }
+
+        props.Author = item.Channel == null
+            ? new EmbedAuthorProperties
+            {
+                Url = item.Entries.FirstOrDefault()?.ChannelUrl,
+                Name = item.Entries.FirstOrDefault()?.Channel,
+            }
+            : new EmbedAuthorProperties
+            {
+                Url = item.ChannelUrl,
+                Name = item.Channel,
+            };
         
         fields.Add(new EmbedFieldProperties
         {
@@ -138,14 +147,14 @@ public static class EmbedPropertiesProvider
         
         fields.Add(new EmbedFieldProperties
         {
-            Name = "Кол-во треков",
+            Name = "Кол-во",
             Inline = true,
             Value = item.Entries.Length.ToString()
         });
 
         fields.Add(new EmbedFieldProperties
         {
-            Name = "Общая длительность",
+            Name = "Длительность",
             Inline = true,
             Value = TimeOnly.FromTimeSpan(TimeSpan.FromSeconds(item.Entries.Sum(e => e.Duration ?? 0))).ToNiceDuration()
         });

@@ -4,6 +4,7 @@ using YoutubeDLSharp;
 using Microsoft.Extensions.Caching.Memory;
 using System.Web;
 using YoutubeDLSharp.Metadata;
+using YoutubeDLSharp.Options;
 
 namespace Cattobot.Youtube.Gateway.Services;
 
@@ -81,7 +82,12 @@ public partial class YoutubeService(
 
     public async Task<VideoData> GetYoutubeVideoInfo(string uri)
     {
-        var data = await _ytdl.RunVideoDataFetch(uri);
+        var data = await _ytdl.RunVideoDataFetch(uri, overrideOptions: new OptionSet()
+        {
+            ExtractorArgs = new MultiValue<string>("youtube:player_skip=webpage,configs,js", "youtubetab:skip=webpage"),
+            CheckFormats = false,
+            CleanInfoJson = false
+        });
 
         return data.Data;
     }
