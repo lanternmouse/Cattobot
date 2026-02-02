@@ -90,7 +90,7 @@ public partial class YoutubeService(
         });
 
         if (!data.Success && data.ErrorOutput.Length > 0)
-            throw new InvalidOperationException(string.Join(", ", data.ErrorOutput));
+            throw new InvalidOperationException(string.Join("\n", data.ErrorOutput));
 
         return data.Data;
     }
