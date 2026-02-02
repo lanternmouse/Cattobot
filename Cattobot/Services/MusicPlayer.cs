@@ -218,12 +218,12 @@ public class MusicPlayer(
 
                 if (voiceClient == null) return;
 
-                await using var voiceStream = voiceClient.CreateOutputStream(normalizeSpeed: true);
+                await using var voiceStream = voiceClient.CreateOutputStream(normalizeSpeed: false);
 
                 await using var opusStream = new OpusEncodeStream(voiceStream, PcmFormat.Short, VoiceChannels.Stereo,
                     OpusApplication.Audio);
 
-                await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, 4 * 1024 * 1024, ct);
+                await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, 4 * 1024, ct);
 
                 await opusStream.FlushAsync(ct);
             }
