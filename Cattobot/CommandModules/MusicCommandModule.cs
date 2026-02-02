@@ -56,8 +56,9 @@ public class MusicCommandModule(
             {
                 await FollowupAsync(new InteractionMessageProperties()
                     .WithContent($":cd: В очередь добавлен плейлист **{enqueued.videoData.Title}**")
-                    .WithEmbeds([EmbedPropertiesProvider.GetPlaylistItemEmbed(enqueued.videoData, enqueued.item.UserId)])
-                    .WithComponents([ComponentsPropertiesProvider.AddedPlaylistItemComponents(enqueued.item)]));
+                    .WithEmbeds(
+                        [EmbedPropertiesProvider.GetPlaylistItemEmbed(enqueued.videoData, enqueued.item.UserId)]));
+                // .WithComponents([ComponentsPropertiesProvider.AddedPlaylistItemComponents(enqueued.item)]));
             }
         }
         catch (Exception e)
