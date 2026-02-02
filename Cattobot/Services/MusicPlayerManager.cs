@@ -28,11 +28,11 @@ public class MusicPlayerManager(
         return player;
     }
     
-    public void Drop(ulong guildId)
+    public async Task Drop(ulong guildId)
     {
         if (MusicPlayers.TryGetValue(guildId, out var player))
         {
-            player.Stop();
+            await player.Stop();
         }
 
         MusicPlayers.Remove(guildId, out _);

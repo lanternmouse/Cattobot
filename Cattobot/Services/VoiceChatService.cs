@@ -75,7 +75,7 @@ public class VoiceChatService : IVoiceChatService
         if (state.ChannelId == null)
         {
             _voiceClients.Remove(state.GuildId);
-            _musicPlayerManager.Drop(state.GuildId);
+            await _musicPlayerManager.Drop(state.GuildId);
         }
         else
         {

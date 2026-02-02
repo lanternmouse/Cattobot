@@ -194,9 +194,10 @@ public class MusicPlayer(
         await SendPlayingNowMessage(currentItem);
     }
 
-    public void Stop()
+    public async Task Stop()
     {
         State.Status = MusicPlayerStatus.Stopped;
+        await TrackCancellationTokenSource.CancelAsync();
         CloseEncodingProcess();
     }
 

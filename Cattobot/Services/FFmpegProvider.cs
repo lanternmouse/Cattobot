@@ -22,10 +22,10 @@ public static class FFmpegProvider
                 "-ac", "2",
                 "-c:a", "pcm_s16le",
                 "-f", "s16le",
-                "-bufsize", "8M",
+                "-bufsize", "4M",
                 "-probesize", "128K",
-                "-analyzeduration", "5000000",
-                "-loglevel", "8",
+                "-analyzeduration", "3000000",
+                "-loglevel", "quiet",
                 "-flush_packets", "1",
                 "pipe:1"
             ]),

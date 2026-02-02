@@ -23,5 +23,5 @@ public interface IMusicPlayer
 
     Task Pause(CancellationToken ct = default);
 
-    void Stop();
+    Task Stop();
 }

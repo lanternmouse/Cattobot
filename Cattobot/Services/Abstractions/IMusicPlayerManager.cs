@@ -4,5 +4,5 @@ public interface IMusicPlayerManager
 {
     MusicPlayer GetOrCreate(ulong guildId);
 
-    void Drop(ulong guildId);
+    Task Drop(ulong guildId);
 }
