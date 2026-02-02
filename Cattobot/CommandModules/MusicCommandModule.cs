@@ -2,6 +2,7 @@ using Cattobot.AutocompleteHandlers;
 using Cattobot.Db.Models.Enums;
 using Cattobot.Services;
 using Cattobot.Services.Abstractions;
+using Microsoft.Extensions.Logging;
 using NetCord;
 using NetCord.Rest;
 using NetCord.Services.ApplicationCommands;
@@ -13,7 +14,8 @@ public class MusicCommandModule(
     IMusicPlayerManager musicPlayerManager,
     ITrackQueueService trackQueueService,
     ITrackQueueRepository trackQueueRepo,
-    IVoiceChatService voiceChatService
+    IVoiceChatService voiceChatService,
+    ILogger<MusicCommandModule> logger
     ) : ApplicationCommandModule<ApplicationCommandContext>
 {
     [SlashCommand("play", "Воспроизвести трек или добавить в очередь")]
@@ -63,7 +65,8 @@ public class MusicCommandModule(
         }
         catch (Exception e)
         {
-            await FollowupAsync(new InteractionMessageProperties().WithContent(e.Message + "\n" + e.StackTrace));
+            await FollowupAsync(new InteractionMessageProperties().WithContent($"Ошибка: {e.Message}"));
+            logger.LogError(e, "Failed to play/enqueue track: {ExceptionMessage}", e.Message);
         }
     }
 

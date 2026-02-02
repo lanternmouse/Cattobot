@@ -89,6 +89,9 @@ public partial class YoutubeService(
             CleanInfoJson = false
         });
 
+        if (data.ErrorOutput.Length > 0)
+            throw new InvalidOperationException(string.Join(", ", data.ErrorOutput));
+
         return data.Data;
     }
 
