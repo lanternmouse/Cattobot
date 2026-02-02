@@ -15,13 +15,18 @@ RUN dotnet publish "./Cattobot.csproj" -c $BUILD_CONFIGURATION -o /app/publish /
 
 FROM base AS final
 WORKDIR /app
+
 RUN apt update
 RUN apt install -y --no-install-recommends libsodium23 libopus0 libopus-dev ffmpeg ca-certificates curl python3 unzip
 RUN rm -rf /var/lib/apt/lists/*
+
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
 RUN chmod +x /usr/local/bin/yt-dlp
 RUN yt-dlp --version
-RUN curl -fsSL https://deno.land/install.sh | sh
+
 USER $APP_UID
+
+RUN curl -fsSL https://deno.land/install.sh -y | sh
+
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Cattobot.dll"]
