@@ -48,7 +48,7 @@ public class TrackQueueService(
         var trackItem = await queueRepo.GetItem(itemId, ct);
         
         // preload source
-        _ = Task.Run(async () => await youtubeService.GetAudioStreamUrl(trackItem!.Track.ExternalUrl, ct), ct);
+        // _ = Task.Run(async () => await youtubeService.GetAudioStreamUrl(trackItem!.Track.ExternalUrl, ct), ct);
 
         return (trackItem!, mediaInfo);
     }

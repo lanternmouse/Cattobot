@@ -65,7 +65,7 @@ public class MusicCommandModule(
         }
         catch (Exception e)
         {
-            await FollowupAsync(new InteractionMessageProperties().WithContent($"Ошибка: {e.Message}"));
+            await FollowupAsync(new InteractionMessageProperties().WithContent($"Ошибка: ```{e.Message}```"));
             logger.LogError(e, "Failed to play/enqueue track: {ExceptionMessage}", e.Message);
         }
     }
