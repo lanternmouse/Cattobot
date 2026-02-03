@@ -24,9 +24,10 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o 
 RUN chmod +x /usr/local/bin/yt-dlp
 RUN yt-dlp --version
 
-USER $APP_UID
+RUN curl -fsSL https://deno.land/install.sh -y | DENO_INSTALL=/usr/local sh
+RUN deno --version
 
-RUN curl -fsSL https://deno.land/install.sh -y | sh
+USER $APP_UID
 
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Cattobot.dll"]
