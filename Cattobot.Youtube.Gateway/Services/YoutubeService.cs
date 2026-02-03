@@ -3,16 +3,32 @@ using Cattobot.Youtube.Gateway.Services.Abstractions;
 using YoutubeDLSharp;
 using Microsoft.Extensions.Caching.Memory;
 using System.Web;
+using Cattobot.Youtube.Gateway.Configuration;
+using Microsoft.Extensions.Options;
 using YoutubeDLSharp.Metadata;
 using YoutubeDLSharp.Options;
 
 namespace Cattobot.Youtube.Gateway.Services;
 
 public partial class YoutubeService(
-    IMemoryCache cache
+    IMemoryCache cache,
+    IOptions<YtDlpOptions> options
     ) : IYoutubeService
 {
     private readonly YoutubeDL _ytdl = new();
+
+    private readonly OptionSet _ytdlOptions = new()
+    {
+        Cookies = options.Value.CookiesFilePath
+    };
+    
+    private readonly OptionSet _ytdlNoFormatsOptions = new()
+    {
+        ExtractorArgs = new MultiValue<string>("youtube:player_skip=webpage,configs,js", "youtubetab:skip=webpage"),
+        CheckFormats = false,
+        CleanInfoJson = false,
+        Cookies = options.Value.CookiesFilePath
+    };
 
     private readonly HttpClient _httpClient = new()
     {
@@ -50,7 +66,7 @@ public partial class YoutubeService(
             }
         }
 
-        var data = await _ytdl.RunVideoDataFetch(url, ct);
+        var data = await _ytdl.RunVideoDataFetch(url, ct, overrideOptions: _ytdlOptions);
 
         var itags = new[] { "774", "251", "141", "250", "140" };
 
@@ -82,12 +98,7 @@ public partial class YoutubeService(
 
     public async Task<VideoData> GetYoutubeVideoInfo(string uri)
     {
-        var data = await _ytdl.RunVideoDataFetch(uri, overrideOptions: new OptionSet()
-        {
-            ExtractorArgs = new MultiValue<string>("youtube:player_skip=webpage,configs,js", "youtubetab:skip=webpage"),
-            CheckFormats = false,
-            CleanInfoJson = false
-        });
+        var data = await _ytdl.RunVideoDataFetch(uri, overrideOptions: _ytdlNoFormatsOptions);
 
         if (!data.Success && data.ErrorOutput.Length > 0)
             throw new InvalidOperationException(string.Join("\n", data.ErrorOutput));
