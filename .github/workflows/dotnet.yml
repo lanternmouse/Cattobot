@@ -67,7 +67,7 @@ jobs:
             -e Wikidata__Token="${WIKIDATA_TOKEN}" \
             -e ConnectionStrings__Default="${CONNECTION_STRING}" \
             --add-host=host.docker.internal:host-gateway \
-            -v /home/user/cookies.txt:/app/cookies.txt:ro \
+            -v /home/user/cookies.txt:/app/cookies.txt:rw \
             lanternmouse/cattobot:latest
           
       - name: Cleanup
