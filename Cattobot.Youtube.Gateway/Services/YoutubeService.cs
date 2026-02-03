@@ -24,7 +24,7 @@ public partial class YoutubeService(
     
     private readonly OptionSet _ytdlNoFormatsOptions = new()
     {
-        ExtractorArgs = new MultiValue<string>("youtube:player_skip=webpage,configs,js", "youtubetab:skip=webpage"),
+        ExtractorArgs = new MultiValue<string>("youtube:player_skip=webpage", "youtubetab:skip=webpage"),
         CheckFormats = false,
         CleanInfoJson = false,
         Cookies = options.Value.CookiesFilePath
