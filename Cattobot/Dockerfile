@@ -20,6 +20,10 @@ RUN apt update
 RUN apt install -y --no-install-recommends libsodium23 libopus0 libopus-dev ffmpeg ca-certificates curl python3 unzip
 RUN rm -rf /var/lib/apt/lists/*
 
+RUN curl -L https://github.com/discord/libdave/releases/latest/download/libdave-Linux-X64-boringssl.zip -o /usr/libdave.zip
+RUN unzip /usr/libdave.zip -d /usr/
+RUN rm /usr/libdave.zip
+
 RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
 RUN chmod +x /usr/local/bin/yt-dlp
 RUN yt-dlp --version
