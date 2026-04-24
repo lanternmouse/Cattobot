@@ -61,7 +61,6 @@ public class MusicPlayer(
         if (initialTrackItemId != null)
         {
             await queueRepo.SetCurrentItem(queue.Id, initialTrackItemId.Value, ct);
-            initialTrackItemId = null;
         }
 
         var currentItem = await queueRepo.GetCurrentItem(queue.Id, ct);
@@ -218,19 +217,12 @@ public class MusicPlayer(
 
                 if (voiceClient == null) return;
 
-                var primeBuffer = new byte[16 * 1024];
-                await State.EncodingProcess.StandardOutput.BaseStream.ReadExactlyAsync(primeBuffer, ct);
-                await Task.Delay(200, ct);
-
-                await using var voiceStream = voiceClient.CreateVoiceStream(new VoiceStreamConfiguration()
-                {
-                    NormalizeSpeed = false
-                });
+                await using var voiceStream = voiceClient.CreateVoiceStream();
 
                 await using var opusStream = new OpusEncodeStream(voiceStream, PcmFormat.Short, VoiceChannels.Stereo,
-                    OpusApplication.RestrictedLowdelay);
+                    OpusApplication.Audio);
 
-                await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, 4 * 1024, ct);
+                await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, ct);
 
                 await opusStream.FlushAsync(ct);
             }
