@@ -215,7 +215,13 @@ public class MusicPlayer(
 
         try
         {
-            await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, ct);
+            var buffer = new Memory<byte>(new byte[3840]); // ~20ms PCM @ 48kHz stereo
+
+            while ((await State.EncodingProcess.StandardOutput.BaseStream.ReadAsync(buffer, ct)) > 0)
+            {
+                await opusStream.WriteAsync(buffer, ct);
+                await Task.Delay(20, ct);
+            }
         }
         catch (OperationCanceledException)
         {
@@ -225,6 +231,8 @@ public class MusicPlayer(
         {
             await SendErrorMessage(trackItem, ex.Message);
         }
+
+        await opusStream.FlushAsync(CancellationToken.None);
 
         CloseEncodingProcess();
     }
