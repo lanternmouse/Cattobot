@@ -53,6 +53,11 @@ public class MusicPlayer(
         var voiceClient = voiceChatService.GetVoiceClient(State.GuildId);
 
         if (voiceClient == null) return;
+        
+        await using var voiceStream = voiceClient.CreateVoiceStream();
+
+        await using var opusStream = new OpusEncodeStream(voiceStream, PcmFormat.Short, VoiceChannels.Stereo,
+            OpusApplication.Audio);
 
         State.Status = MusicPlayerStatus.Playing;
 
@@ -85,8 +90,8 @@ public class MusicPlayer(
                 {
                     TrackCancellationTokenSource.Dispose();
                     TrackCancellationTokenSource = new CancellationTokenSource();
-                    
-                    await PlayTrack(currentItem, TrackCancellationTokenSource.Token);
+
+                    await PlayTrack(opusStream, currentItem, TrackCancellationTokenSource.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -200,51 +205,28 @@ public class MusicPlayer(
         CloseEncodingProcess();
     }
 
-    private async Task PlayTrack(TrackQueueItemDb trackItem, CancellationToken ct = default)
+    private async Task PlayTrack(Stream opusStream, TrackQueueItemDb trackItem, CancellationToken ct = default)
     {
         CloseEncodingProcess();
 
         var sourceUrl = await youtubeService.GetAudioStreamUrl(trackItem.Track.ExternalUrl, ct);
-        
+
         State.EncodingProcess = FFmpegProvider.StartEncodeProcess(sourceUrl);
 
-        var tries = 0;
-        while (tries < 3)
+        try
         {
-            try
-            {
-                var voiceClient = voiceChatService.GetVoiceClient(State.GuildId);
-
-                if (voiceClient == null) return;
-
-                await using var voiceStream = voiceClient.CreateVoiceStream();
-
-                await using var opusStream = new OpusEncodeStream(voiceStream, PcmFormat.Short, VoiceChannels.Stereo,
-                    OpusApplication.Audio);
-
-                await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, ct);
-
-                await opusStream.FlushAsync(ct);
-            }
-            catch (OperationCanceledException)
-            {
-                // ignore
-            }
-            catch (ObjectDisposedException)
-            {
-                logger.LogDebug("Voice client disposed. Retrying...");
-                await Task.Delay(100, ct);
-                tries++;
-                continue;
-            }
-            catch (Exception ex)
-            {
-                await SendErrorMessage(trackItem, ex.Message);
-            }
-
-            CloseEncodingProcess();
-            break;
+            await State.EncodingProcess.StandardOutput.BaseStream.CopyToAsync(opusStream, ct);
         }
+        catch (OperationCanceledException)
+        {
+            // ignore
+        }
+        catch (Exception ex)
+        {
+            await SendErrorMessage(trackItem, ex.Message);
+        }
+
+        CloseEncodingProcess();
     }
 
     private async Task SendPlayingNowMessage(TrackQueueItemDb trackItem)
