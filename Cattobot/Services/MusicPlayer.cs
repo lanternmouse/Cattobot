@@ -221,8 +221,11 @@ public class MusicPlayer(
                 var primeBuffer = new byte[16 * 1024];
                 await State.EncodingProcess.StandardOutput.BaseStream.ReadExactlyAsync(primeBuffer, ct);
                 await Task.Delay(200, ct);
-                
-                await using var voiceStream = voiceClient.CreateOutputStream(normalizeSpeed: false);
+
+                await using var voiceStream = voiceClient.CreateVoiceStream(new VoiceStreamConfiguration()
+                {
+                    NormalizeSpeed = false
+                });
 
                 await using var opusStream = new OpusEncodeStream(voiceStream, PcmFormat.Short, VoiceChannels.Stereo,
                     OpusApplication.RestrictedLowdelay);

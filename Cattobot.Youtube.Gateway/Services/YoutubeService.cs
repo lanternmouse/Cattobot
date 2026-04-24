@@ -19,7 +19,7 @@ public partial class YoutubeService(
 
     private readonly OptionSet _ytdlOptions = new()
     {
-        Cookies = options.Value.CookiesFilePath
+        // Cookies = options.Value.CookiesFilePath
     };
     
     private readonly OptionSet _ytdlNoFormatsOptions = new()
@@ -27,7 +27,7 @@ public partial class YoutubeService(
         ExtractorArgs = new MultiValue<string>("youtube:player_skip=webpage", "youtubetab:skip=webpage"),
         CheckFormats = false,
         CleanInfoJson = false,
-        Cookies = options.Value.CookiesFilePath
+        // Cookies = options.Value.CookiesFilePath
     };
 
     private readonly HttpClient _httpClient = new()
